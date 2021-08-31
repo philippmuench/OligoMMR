@@ -1,0 +1,3 @@
+# dummy data
+x <- sample(1000)
+usethis::use_data(x, overwrite = TRUE)

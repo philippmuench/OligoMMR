@@ -332,6 +332,7 @@ translateIsolateIDtoBug <- function(dat) {
     replace(. == "SW63", "kb1") %>%
     replace(. == "SW64", "kb1") %>%
     replace(. == "SW65", "kb1") %>%
+    replace(. == "SW66", "kb1") %>%
     replace(. == "SW67", "kb1") %>%
     replace(. == "SW68", "kb1") %>%
     replace(. == "SW69", "kb1") %>%

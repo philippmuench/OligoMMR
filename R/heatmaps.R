@@ -5,7 +5,7 @@
 #' @param mouse_ids
 #' @param genome_hr the name of the genome to plot, sould be present in iso_profile
 #' @param col_fun function that assigns the AF color
-#' @param unfiltered boolean, if intermediate AF should be filterd
+#' @param filtered boolean, if TRUE, SNPs will be filtered based on median
 #' @return a ComplexHeamtap object
 #' @export
 create_heatmap_iso <- function(iso_profile,
@@ -13,7 +13,7 @@ create_heatmap_iso <- function(iso_profile,
                                mouse_ids = c("1683", "1688", "1692", "1699"),
                                genome_hr = "C. innocuum",
                                col_fun = col_fun,
-                               unfiltered = T) {
+                               filtered = F) {
   library(dplyr)
   # subset WGS data
   df <- data.frame(
@@ -77,7 +77,7 @@ create_heatmap_iso <- function(iso_profile,
     ),
     show_annotation_name = FALSE
   )
-  if (unfiltered) {
+  if (!filtered) {
     ht_iso <- Heatmap(data.matrix(iso_bug_wide_mat),
                       name = "AF",
                       right_annotation = ha1, # row_ha2,

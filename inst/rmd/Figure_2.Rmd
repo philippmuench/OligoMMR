@@ -10,66 +10,56 @@ devtools::install_github("philippmuench/OligoMMR")
 ```{r}
 library(OligoMMR)
 data(oligomm_ab_wgs_imputed_wide) # contains AF profile for heatmap
-wgs_data <- oligomm_ab_wgs_imputed_wide
-dat <- wgs_data
 data(oligomm_ab_isolates) # for annotation purpose
-iso_data <- oligomm_ab_isolates
 ```
 
 ```{r}
 effect_size_threshold <- 0.1
 p_threshold <- 0.001
 af_threshold <- 0
-show_isolate <- T
-filter_by_bug <- TRUE
+count_threshold <- 8
 mouse_ids <- c("1683", "1688", "1692", "1699")
 col_fun <- circlize::colorRamp2(c(0, 0.5, 1), c("white", "orange", "red"))
 ```
 
+We filter now the AF matrix, first by the p values associated to each SNP, then by the effect size and finally using a threshold on how many non-NA observations should be per SNP
+
 ```{r}
-df_wide_bug <- as.data.frame(dat)
+df_wide_bug <- as.data.frame(oligomm_ab_wgs_imputed_wide)
 df_wide_bug <- df_wide_bug[which(df_wide_bug$p_ciprofloxacin <= p_threshold |
                                    df_wide_bug$p_tetracyclin <= p_threshold |
                                    df_wide_bug$p_vancomycin <= p_threshold ),]
-
 dim(df_wide_bug)
-
 df_wide_bug <- df_wide_bug[which(df_wide_bug$effect_size_ciprofloxacin >= effect_size_threshold |
                                    df_wide_bug$effect_size_ciprofloxacin >= effect_size_threshold |
                                    df_wide_bug$effect_size_ciprofloxacin >= effect_size_threshold ),]
 dim(df_wide_bug)
-
-df_wide_bug <- df_wide_bug[which(df_wide_bug$observations_vancomycin >= 8 &
-                                   df_wide_bug$observations_tetracyclin >= 8 &
-                                   df_wide_bug$observations_control >= 8 &
-                                   df_wide_bug$observations_ciprofloxacin >= 8 ),]
-
+df_wide_bug <- df_wide_bug[which(df_wide_bug$observations_vancomycin >= count_threshold &
+                                   df_wide_bug$observations_tetracyclin >= count_threshold &
+                                   df_wide_bug$observations_control >= count_threshold &
+                                   df_wide_bug$observations_ciprofloxacin >= count_threshold ),]
 dim(df_wide_bug)
 ```
+We transform the dataframe in a format that can be used for a heatmap
 ```{r}
+require(matrixStats)
 # order by genome and position 
 df_wide_bug <- df_wide_bug[order(df_wide_bug$chr, df_wide_bug$POS), ]
-
 # get SNP statistics we can use for filtering later
-require(matrixStats)
-
 # split in annot and data
 df_wide_bug_mat <- df_wide_bug[,  grep("16", colnames(df_wide_bug))]
 annot <- df_wide_bug[, grep("16", colnames(df_wide_bug), invert = T)]
-
 # subset for relevant mouse ids
 limited_mat <- df_wide_bug_mat[, which(substr(colnames(df_wide_bug_mat), 1, 4) %in% mouse_ids)]
 rownames(limited_mat) <- paste0(annot$feature, "-",  annot$POS)
-
 # Again filter for SNPs that are present in these mice
 keep <- which(rowSums(limited_mat > 0, na.rm = T) > 0)
-
 limited_mat <- limited_mat[keep,]
 annot <- annot[keep,]
 ```
 
+We reorder the data frames (columns)
 ```{r}
-# get the order of columns right
 orders <- data.frame(
   day = as.integer(substr(colnames(limited_mat), 6, 7)),
   mouse = substr(colnames(limited_mat), 1, 4)
@@ -86,7 +76,6 @@ Heatmap annotations
 
 ```{r}
 require(ComplexHeatmap)
-
 day_annot_1 <- ifelse(binDaysByPhase(
   as.integer(substr(colnames(limited_mat),
                     6, 7))) == "post-treatment", "*", "")
@@ -159,8 +148,12 @@ sig_ha <- ComplexHeatmap::rowAnnotation(cipro = ComplexHeatmap::anno_simple(ifel
 
 snp_ids <- paste0(annot$chr,"-" ,annot$POS, "-",annot$ALT, "-", annot$REF)
 # iso_data <- iso_data[which(iso_data$AF > 0.8),]
-iso_data$snp_ids <- paste0(iso_data$chr,"-" ,iso_data$POS, "-",  iso_data$REF,"-",  iso_data$ALT)
-in_iso <- ifelse(snp_ids %in% iso_data$snp_ids == TRUE, "in_isolates", "not_in_isolates")
+oligomm_ab_isolates$snp_ids <- paste0(oligomm_ab_isolates$chr,"-" ,
+                                      oligomm_ab_isolates$POS, "-", 
+                                      oligomm_ab_isolates$REF,"-",
+                                      oligomm_ab_isolates$ALT)
+in_iso <- ifelse(snp_ids %in% oligomm_ab_isolates$snp_ids == TRUE,
+                 "in_isolates", "not_in_isolates")
 sig_ha_col_in_iso <- c("in_isolates" = "white", "not_in_isolates" = "white")
 ```
 

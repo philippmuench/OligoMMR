@@ -22,4 +22,5 @@ data()
 
 This R packages functions as the start point for the data analysis steps presented in Muench et al. 2021 study.
 
-- [Google Colab Figure 5 (genomuic isolates)](https://colab.research.google.com/drive/1zLSLevQTCF80KBa3_fJ9VLHssrCePs-l?usp=sharing)
+- [Google Colab of Fig. 2 (AF profile of WGS samples)](https://colab.research.google.com/drive/1zLSLevQTCF80KBa3_fJ9VLHssrCePs-l?usp=sharing)
+- [Google Colab of Fig. 5 (AF profile of genomic isolates)](https://colab.research.google.com/drive/1zLSLevQTCF80KBa3_fJ9VLHssrCePs-l?usp=sharing)

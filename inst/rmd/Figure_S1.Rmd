@@ -1,0 +1,76 @@
+---
+title: "Figure S1"
+output: html_document
+---
+
+```{r, eval=FALSE}
+devtools::install_github("philippmuench/OligoMMR")
+```
+
+```{r}
+library(OligoMMR)
+data(oligomm_ab_isolates)
+```
+
+## Panel A
+
+```{r}
+require(ggplot2)
+p <- ggplot(oligomm_ab_isolates, aes(x = AF)) + geom_histogram() 
+p <- p + facet_wrap(~genome_hr, scales = "free_y")
+p <- p + theme_pmuench(base_size = 9)
+p
+```
+## Panel B
+
+```{r}
+dat_one <- oligomm_ab_isolates[which(oligomm_ab_isolates$chr == "Clostridium_innocuum_I46"),]
+dat_one_lowaf <- dat_one[which(dat_one$AF < 0.9 & dat_one$AF > 0.1),]
+dat_one_highaf <- dat_one[which(dat_one$AF >= 0.9),]
+dat_one_lowaf_agg <- aggregate(DP ~ sample, data = dat_one_lowaf, FUN = mean)
+dat_one_highwaf_agg <- aggregate(DP ~ sample, data = dat_one_highaf, FUN = mean)
+dat_one_lowaf_agg$high <- dat_one_highwaf_agg$DP
+dat_one_lowaf_agg$factor <- round(dat_one_lowaf_agg$DP / dat_one_lowaf_agg$high, digits = 1)
+```
+
+```{r}
+p <- ggplot(dat_one_lowaf_agg, aes(x = high, y = DP, label = factor)) + geom_point(size = 8, shape = 0)
+p <- p + geom_smooth(method = "lm", se = F)
+p <- p + geom_segment(aes(xend = high), yend = 0, alpha = .05)
+p <- p + geom_segment(aes(yend = DP), xend = 0, alpha = .05)
+p <- p +  theme(aspect.ratio=1) + xlim(c(200, 450)) + ylim(c(200, 800))
+p <- p + geom_abline(intercept = 0, color = "green") + geom_text() + theme_pmuench(base_size = 9)
+p <- p + geom_abline(intercept = 0, slope = 2, color = "red") 
+p <- p + xlab("mean depth on high AF (>=90%) SNP") + ylab("mean depth on intermediate AF (<90%) SNPs") + ggtitle("C. innocuum")
+p
+```
+## Statistics
+
+And there is a correlation of 0.6814354 (p-value = 4.903e-07)
+
+```{r}
+cor.test(dat_one_lowaf_agg$DP, dat_one_lowaf_agg$high)
+```
+
+## Panel C
+
+```{r}
+data(oligomm_ab_isolates)
+data(oligomm_ab_wgs)
+
+oligomm_ab_isolates$snp.id2 <- paste0(oligomm_ab_isolates$chr, "-", oligomm_ab_isolates$snp_id)
+oligomm_ab_wgs$snp.id2 <- paste0(oligomm_ab_wgs$chr, "-", oligomm_ab_wgs$snp_id)
+
+both <- merge(oligomm_ab_wgs, oligomm_ab_isolates, by = "snp.id2", all.x = T, all.y = T)
+both_2sets <- both[which(!is.na(both$snp_id.y) & !is.na(both$snp_id.x)),]
+```
+
+```{r}
+require(ggplot2)
+both_2sets <- both_2sets[which(both_2sets$genome_hr.x == "C. innocuum"),]
+p <- ggplot(both_2sets, aes(x = AF.x, y = AF.y)) + geom_point(size = .1)
+p <- p + theme_pmuench(base_size = 9) + theme(aspect.ratio=1)
+p <- p + xlab("AF in WGS") + ylab("AF in isolates") + facet_wrap(~genome_hr.x)
+p
+```
+

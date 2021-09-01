@@ -1,3 +1,2 @@
-# dummy data
-x <- sample(1000)
-usethis::use_data(x, overwrite = TRUE)
+oligomm_ab_isolates <- readRDS("data-raw/omm_ab_isolates.rds")
+usethis::use_data(oligomm_ab_isolates, overwrite = TRUE)

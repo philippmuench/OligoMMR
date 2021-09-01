@@ -1,0 +1,200 @@
+---
+title: "Figure 2"
+output: html_document
+---
+
+```{r, eval=FALSE}
+devtools::install_github("philippmuench/OligoMMR")
+```
+
+```{r}
+library(OligoMMR)
+data(oligomm_ab_wgs_imputed_wide) # contains AF profile for heatmap
+wgs_data <- oligomm_ab_wgs_imputed_wide
+dat <- wgs_data
+data(oligomm_ab_isolates) # for annotation purpose
+iso_data <- oligomm_ab_isolates
+```
+
+```{r}
+effect_size_threshold <- 0.1
+p_threshold <- 0.001
+af_threshold <- 0
+show_isolate <- T
+filter_by_bug <- TRUE
+mouse_ids <- c("1683", "1688", "1692", "1699")
+col_fun <- circlize::colorRamp2(c(0, 0.5, 1), c("white", "orange", "red"))
+```
+
+```{r}
+df_wide_bug <- as.data.frame(dat)
+df_wide_bug <- df_wide_bug[which(df_wide_bug$p_ciprofloxacin <= p_threshold |
+                                   df_wide_bug$p_tetracyclin <= p_threshold |
+                                   df_wide_bug$p_vancomycin <= p_threshold ),]
+
+dim(df_wide_bug)
+
+df_wide_bug <- df_wide_bug[which(df_wide_bug$effect_size_ciprofloxacin >= effect_size_threshold |
+                                   df_wide_bug$effect_size_ciprofloxacin >= effect_size_threshold |
+                                   df_wide_bug$effect_size_ciprofloxacin >= effect_size_threshold ),]
+dim(df_wide_bug)
+
+df_wide_bug <- df_wide_bug[which(df_wide_bug$observations_vancomycin >= 8 &
+                                   df_wide_bug$observations_tetracyclin >= 8 &
+                                   df_wide_bug$observations_control >= 8 &
+                                   df_wide_bug$observations_ciprofloxacin >= 8 ),]
+
+dim(df_wide_bug)
+```
+```{r}
+# order by genome and position 
+df_wide_bug <- df_wide_bug[order(df_wide_bug$chr, df_wide_bug$POS), ]
+
+# get SNP statistics we can use for filtering later
+require(matrixStats)
+
+# split in annot and data
+df_wide_bug_mat <- df_wide_bug[,  grep("16", colnames(df_wide_bug))]
+annot <- df_wide_bug[, grep("16", colnames(df_wide_bug), invert = T)]
+
+# subset for relevant mouse ids
+limited_mat <- df_wide_bug_mat[, which(substr(colnames(df_wide_bug_mat), 1, 4) %in% mouse_ids)]
+rownames(limited_mat) <- paste0(annot$feature, "-",  annot$POS)
+
+# Again filter for SNPs that are present in these mice
+keep <- which(rowSums(limited_mat > 0, na.rm = T) > 0)
+
+limited_mat <- limited_mat[keep,]
+annot <- annot[keep,]
+```
+
+```{r}
+# get the order of columns right
+orders <- data.frame(
+  day = as.integer(substr(colnames(limited_mat), 6, 7)),
+  mouse = substr(colnames(limited_mat), 1, 4)
+)
+orders <- transform(orders,
+                    mouse = factor(mouse, labels = mouse_ids)
+)
+
+orders2 <- orders[with(orders, order(mouse, day)), ]
+sample_id_in_order <- paste0(orders2$mouse, "-", orders2$day)
+```
+
+Heatmap annotations
+
+```{r}
+require(ComplexHeatmap)
+
+day_annot_1 <- ifelse(binDaysByPhase(
+  as.integer(substr(colnames(limited_mat),
+                    6, 7))) == "post-treatment", "*", "")
+day_annot_1[which(
+  translateMouseIdToTreatmentGroup(substr(colnames(limited_mat),
+                                          1, 4)) == "Control")] <- "" # Reset arrows for control
+day_annot_2 <- as.integer(substr(colnames(limited_mat), 6, 7))
+
+# Annotation columns - should be in the order matched limited_mat
+col_fun_ha <- circlize::colorRamp2(c(0, max(day_annot_2)), c("white", "grey50"))
+column_ha <- ComplexHeatmap::HeatmapAnnotation(day = anno_simple(day_annot_2,
+                                                 col = col_fun_ha,
+                                                 pch = day_annot_1,
+                                                 height = unit(.4, "cm"),
+                                                 border = TRUE),
+                               annotation_name_gp = gpar(fontsize = 6))
+
+# row_ha <- list(type = c("coding" = "black", "non-coding" = "gey10", "hypothetical" = "gey50"))
+row_ha_col <- c("coding" = "black", "non-coding" = "white", "hypothetical" = "grey50")
+
+annot_function_simple <- as.character(as.matrix(annot$feature))
+annot_function_simple[which(annot_function_simple != "hypothetical protein" &
+                              annot_function_simple != "outside ORFs")] <- "coding"
+annot_function_simple <- annot_function_simple %>%
+  replace(. == "hypothetical protein", "hypothetical") %>%
+  replace(. == "outside ORFs", "non-coding") %>%
+  replace(. == "coding", "coding") # rename
+
+row_ha <- ComplexHeatmap::rowAnnotation(type = anno_simple(annot_function_simple,
+                                           border = TRUE,
+                                           simple_anno_size = unit(.2, "cm"),
+                                           col = row_ha_col
+))
+
+row_titles_occ <- as.data.frame(table(annot$feature))
+row_titles_occ <- row_titles_occ[order(-row_titles_occ$Freq), ]
+row_titles_occ <- row_titles_occ[which(row_titles_occ$Var1 != "hypothetical protein" & row_titles_occ$Var1 != "outside ORFs"), ]
+row_titles_occ_frequent <- as.character(as.matrix(row_titles_occ[which(row_titles_occ$Freq >= 5), ]$Var1))
+
+row_titles <- unique(annot$feature)
+row_titles[which(row_titles == "outside ORFs")] <- ""
+row_titles[which(row_titles == "hypothetical protein")] <- ""
+row_titles[which(!row_titles %in% row_titles_occ_frequent)] <- ""
+annot$p_tetracyclin_star <- gtools::stars.pval(annot$p_tetracyclin)
+
+sig_ha_col_p_ciprofloxacin <- c("sig" = "white", "non-sig" = "white")
+sig_ha_col_p_p_tetracyclin <- c("sig" = "white", "non-sig" = "white")
+sig_ha_col_p_vancomycin <- c("sig" = "white", "non-sig" = "white")
+
+pch_num <- 20
+sig_ha <- ComplexHeatmap::rowAnnotation(cipro = ComplexHeatmap::anno_simple(ifelse(annot$p_ciprofloxacin < 0.05, "sig", "non-sig"),
+                                            pch = ifelse(annot$p_ciprofloxacin < 0.05, pch_num, NA),
+                                            border = TRUE,
+                                            pt_size = unit(1, "mm"),
+                                            col = sig_ha_col_p_ciprofloxacin,
+                                            simple_anno_size = unit(.2, "cm")),
+                        tet = anno_simple(ifelse(annot$p_tetracyclin < 0.05, "sig", "non-sig"),
+                                          pch = ifelse(annot$p_tetracyclin < 0.05, pch_num, NA),
+                                          border = TRUE,
+                                          pt_size = unit(1, "mm"),
+                                          col = sig_ha_col_p_p_tetracyclin,
+                                          simple_anno_size = unit(.2, "cm")),
+                        vanco = anno_simple(ifelse(annot$p_vancomycin < 0.05, "sig", "non-sig"),
+                                            pch = ifelse(annot$p_vancomycin < 0.05, pch_num, NA),
+                                            border = TRUE,
+                                            pt_size = unit(1, "mm"),
+                                            col = sig_ha_col_p_vancomycin,
+                                            simple_anno_size = unit(.2, "cm")),
+                        annotation_name_gp = gpar(fontsize = 6))
+
+snp_ids <- paste0(annot$chr,"-" ,annot$POS, "-",annot$ALT, "-", annot$REF)
+# iso_data <- iso_data[which(iso_data$AF > 0.8),]
+iso_data$snp_ids <- paste0(iso_data$chr,"-" ,iso_data$POS, "-",  iso_data$REF,"-",  iso_data$ALT)
+in_iso <- ifelse(snp_ids %in% iso_data$snp_ids == TRUE, "in_isolates", "not_in_isolates")
+sig_ha_col_in_iso <- c("in_isolates" = "white", "not_in_isolates" = "white")
+```
+
+
+```{r}
+# Again filter for SNPs that are > 0.5 in at leat one sample shown
+#  keep <- do.call(function(...) pmax(..., na.rm = TRUE), limited_mat) > 0.25
+#  limited_mat <- limited_mat[keep,]
+#  annot <- annot[keep,]
+```
+
+```{r}
+ht <- ComplexHeatmap::Heatmap(data.matrix(limited_mat),
+                              name = "AF",
+                              left_annotation = sig_ha,
+                              na_col = "grey80",
+                              cluster_rows = F,
+                              row_gap = unit(0, "mm"),
+                              row_split = annot$chr,
+                              row_title_rot = 0,
+                              row_title_gp = gpar(fontsize = 4),
+                              top_annotation = column_ha,
+                              col = col_fun,
+                              column_split = factor(translateMouseIdToTreatmentGroup(substr(colnames(limited_mat), 1, 4)),
+                                                    levels = c("Control", "Ciprofloxacin", "Tetracyclin", "Vancomycin")
+                              ),
+                              column_gap = unit(1, "mm"),
+                              gap = unit(0, "mm"),
+                              cluster_columns = F,
+                              border_gp = gpar(col = "black", lty = 1),
+                              show_row_dend = F,
+                              column_title_gp = gpar(fontsize = 6),
+                              column_names_gp = gpar(fontsize = 3),
+                              show_row_names = T,
+                              row_names_gp = gpar(fontsize = 3))
+ht
+```

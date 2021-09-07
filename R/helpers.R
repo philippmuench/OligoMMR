@@ -233,6 +233,7 @@ translateIsolateIDtoMouse <- function(dat) {
     replace(. == "SW63", "1691") %>%
     replace(. == "SW64", "1691") %>%
     replace(. == "SW65", "1691") %>%
+    replace(. == "SW66", "1691") %>%
     replace(. == "SW67", "1691") %>%
     replace(. == "SW68", "1691") %>%
     replace(. == "SW69", "1691") %>%

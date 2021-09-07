@@ -1,0 +1,373 @@
+---
+title: "Figure 4 (phages)"
+output: html_document
+---
+
+```{r, eval=FALSE}
+devtools::install_github("philippmuench/OligoMMR")
+```
+
+```{r}
+library(OligoMMR)
+library(zoo)
+library(ggplot2)
+data("oligomm_ab_coverage_Bacteroides_caecimuris_I48")
+coverage <- oligomm_ab_coverage_Bacteroides_caecimuris_I48
+```
+
+## Panel A, overview plot of B. caecimuris
+
+```{r}
+coverage_one_sample <- as.data.frame(
+  coverage[which(coverage$day == "63" &
+                coverage$mouse.id == "1681"), ])
+
+smoothing <- 100
+cov_reduced <- data.frame(start = zoo::rollapply(coverage_one_sample$start,
+                                            width = smoothing, 
+                                            by = smoothing,
+                                            FUN = min, align = "left"),
+                          end = zoo::rollapply(coverage_one_sample$end,
+                                         width = smoothing,
+                                         by = smoothing, 
+                                         FUN = max, align = "left"),
+                          cov = zoo::rollapply(coverage_one_sample$score, 
+                                          width = smoothing, 
+                                          by = smoothing, 
+                                          FUN = median, align = "left"))
+
+
+data(oligomm_ab_phages_phaster_incomplete)
+oligomm_ab_phages_phaster_incomplete <- oligomm_ab_phages_phaster_incomplete[which(oligomm_ab_phages_phaster_incomplete$chr == "Bacteroides_caecimuris_I48"),]
+oligomm_ab_phages_phaster_incomplete$pos <- oligomm_ab_phages_phaster_incomplete$start+ oligomm_ab_phages_phaster_incomplete$end - oligomm_ab_phages_phaster_incomplete$start
+
+p <- ggplot(cov_reduced, aes(x = start,  y = cov))
+p <- p + geom_vline(xintercept = 2957999, color = "darkblue", linetype = 3)
+p <- p + geom_vline(xintercept = 3010600, color = "darkblue", linetype = 3)
+
+p <- p + geom_vline(xintercept = 3620000, color = "darkred", linetype = 3)
+p <- p + geom_vline(xintercept = 3678000, color = "darkred", linetype = 3)
+
+p <- p + geom_vline(xintercept = 4060000, color = "darkgreen", linetype = 3)
+p <- p + geom_vline(xintercept = 4105000, color = "darkgreen", linetype = 3)
+p <- p + geom_vline(data = oligomm_ab_phages_phaster_incomplete, aes(xintercept = pos), color  = "grey50", linetype = 1)
+p <- p + geom_line(size = .5)
+p <- p + theme_pmuench(base_size = 9)
+p <- p + xlab("Position in genome") + ylab("Coverage")
+p <- p + ggtitle("Bacteroides_caecimuris_I48, Control group, Day 63")
+#p <- p + xlim(c(4000000,4150000))
+pdf("Figure_4_a.pdf", width = 8, height = 4)
+print(p)
+dev.off()
+```
+## Panel Region 1
+
+```{r}
+library(OligoMMR)
+library(zoo)
+library(ggplot2)
+
+region_start <- 2850000
+region_end <- 3100000
+phage_start <- 2957999
+phage_end <- 3010600
+
+smoothing <- 50
+
+data("oligomm_ab_coverage_Bacteroides_caecimuris_I48")
+coverage_one_sample <- oligomm_ab_coverage_Bacteroides_caecimuris_I48
+
+# Filter by position
+cov_on_phage <- coverage_one_sample[which(coverage_one_sample$start
+                                          > region_start &
+                                            coverage_one_sample$start < region_end), ]
+cov_on_phage$cov_smoothed <- rollmean(cov_on_phage$score, smoothing, na.pad = TRUE)
+
+cov_on_phage$phase_num <- NULL
+cov_on_phage$width <- NULL
+cov_on_phage$strand <- NULL
+cov_on_phage$score <- NULL
+cov_on_phage$phase <- NULL
+
+cov_on_phage_median <- aggregate(cov_smoothed ~  start + mouse.group + day,
+                               FUN = "median", 
+                               data = cov_on_phage)
+cov_on_phage_iqr <- aggregate(cov_smoothed ~  start + mouse.group + day,
+                                  FUN = "IQR", 
+                                  data = cov_on_phage)
+stopifnot(all(cov_on_phage_median$start == cov_on_phage_iqr$start))
+cov_on_phage_median$iqr <- cov_on_phage_iqr$cov_smoothed
+
+cov_on_only_phage <- cov_on_phage_median[which(cov_on_phage_median$start
+                                                > phage_start &
+                                                 cov_on_phage_median$start < phage_end), ]
+
+# get mean coverage within phage region
+cov_on_phage_median2 <- aggregate(cov_smoothed ~ mouse.group + day,
+                               FUN = "median", 
+                               data = cov_on_phage_median)
+cov_on_only_phage_median <- aggregate(cov_smoothed ~ mouse.group + day,
+                               FUN = "median", 
+                               data = cov_on_only_phage)
+
+cov_on_phage_median2_subset <- cov_on_phage_median2[which(cov_on_phage_median2$mouse.group == "Vancomycin"),]
+cov_on_phage_median2_subset <- cov_on_phage_median2_subset[which(cov_on_phage_median2_subset$day %in% c(0, 4, 9, 14, 18)),]
+
+cov_on_phage_median_subset <- cov_on_phage_median[which(cov_on_phage_median$mouse.group == "Vancomycin"),]
+cov_on_phage_median_subset <- cov_on_phage_median_subset[which(cov_on_phage_median_subset$day %in% c(0, 4, 9, 14, 18)),]
+
+cov_on_only_phage_median_subset <- cov_on_only_phage_median[which(cov_on_only_phage_median$mouse.group == "Vancomycin"),]
+cov_on_only_phage_median_subset <- cov_on_only_phage_median_subset[which(cov_on_only_phage_median_subset$day %in% c(0, 4, 9, 14, 18)),]
+
+#cov_on_phage_median2_subset$inside <- cov_on_only_phage_median_subset$cov_smoothed
+
+cov_on_phage_median2_subset$inside <- cov_on_only_phage_median_subset$cov_smoothed
+cov_on_phage_median2_subset$FC <- round(cov_on_phage_median2_subset$inside /cov_on_phage_median2_subset$cov_smoothed, digits = 1)
+
+
+p <- ggplot(cov_on_phage_median_subset, aes(x = (start + (smoothing/2)) / 1e6,
+                              y = cov_smoothed))
+p <- p + geom_rect(xmin = phage_start,
+                   xmax = phage_end,
+                   ymin = -Inf,  ymax = Inf,
+                   fill = "grey90", alpha = .2, color = NA)
+p <- p + geom_line()
+p <- p + facet_wrap( ~ day, ncol = 1,nrow = 5 , strip.position = "right")
+p <- p + xlab("Position [in million nt]") + ylab("Read coverage")
+p <- p + theme(axis.title.x = element_blank(),
+               axis.text.x = element_blank(),
+               axis.ticks.x = element_blank())
+p <- p + scale_x_continuous(breaks = c(2.9, 3.0, 3.1))
+p <- p + geom_hline(data = cov_on_only_phage_median_subset,
+                    aes(yintercept = cov_smoothed), colour = "red", linetype = 3) 
+
+p <- p + geom_hline(data = cov_on_phage_median2_subset,
+                    aes(yintercept = cov_smoothed), colour = "black", linetype = 3) 
+p <- p + geom_ribbon(aes(ymin=cov_smoothed - iqr, ymax = cov_smoothed + iqr,
+                         x = (start + smoothing/2) / 1e6, fill = "IQR"), alpha = 0.3)
+p <- p + theme_pmuench(base_size = 9)
+
+p <- p + geom_text(data = cov_on_phage_median2_subset, x = 3.06, y = 5000, aes(label = paste0("FC=", FC)), size = 2.3)
+p <- p + theme(aspect.ratio = .5)
+
+pdf("Figure_4_B.pdf", width = 2.5, height = 4.5)
+print(p)
+dev.off()
+```
+
+
+## Panel C
+
+```{r}
+fc_list <- list()
+cov_on_phage_median2$inside <- cov_on_only_phage_median$cov_smoothed
+cov_on_phage_median2$region <- "region_1"
+fc_list[["region_1"]] <- cov_on_phage_median2
+
+p <- ggplot(cov_on_phage_median2, aes(y = cov_smoothed, 
+                                      ymin = cov_smoothed,
+                                      x = day, 
+                                      ymax = inside, 
+                                      group = mouse.group, 
+                                      color = mouse.group))
+p <- p + geom_line()
+p <- p + facet_grid(mouse.group ~. )
+
+p <- p + geom_rect(xmin = 0, xmax = 4,ymin = -Inf, ymax = Inf, color = "grey95", fill = "grey95", alpha = .1) 
+p <- p + geom_rect(xmin = 14, xmax = 18,ymin = -Inf, ymax = Inf,  color = "grey95", fill = "grey95", alpha = .1) 
+p <- p + geom_rect(xmin = 49, xmax = 53,ymin = -Inf, ymax = Inf,  color = "grey95", fill = "grey95", alpha = .1) 
+p <- p + geom_rect(xmin = 64, xmax = 68,ymin = -Inf, ymax = Inf,  color = "grey95", fill = "grey95", alpha = .1) 
+p <- p + geom_ribbon(aes(ymin=cov_smoothed, ymax=inside,
+                         x = day, fill = mouse.group), alpha = 0.3)
+
+p <- p + ggtitle("Bacteroides caecimuris (putative prophage 1)")
+p <- p + theme_pmuench(base_size = 9) + xlab("Day") + ylab("Coverage")
+p <- p + scale_color_manual(name = "Group", values= c("Control" = "#476090",
+                                                      "Ciprofloxacin" = "#E0A91B",
+                                                      "Tetracyclin" = "#385337",
+                                                      "Vancomycin" = "#8C3701"))
+p <- p + scale_fill_manual(name = "Group", values= c("Control" = "#476090",
+                                                     "Ciprofloxacin" = "#E0A91B",
+                                                     "Tetracyclin" = "#385337",
+                                                     "Vancomycin" = "#8C3701"))
+
+pdf("Figure_4_c.pdf", width = 5, height = 3.5)
+print(p)
+dev.off()
+```
+
+## Pane D
+
+```{r}
+region_start <- 3620000 - 100000
+region_end <- 3678000 + 100000
+phage_start <- 3620000
+phage_end <- 3678000
+
+smoothing <- 50
+
+data("oligomm_ab_coverage_Bacteroides_caecimuris_I48")
+coverage_one_sample <- oligomm_ab_coverage_Bacteroides_caecimuris_I48
+
+# Filter by position
+cov_on_phage <- coverage_one_sample[which(coverage_one_sample$start
+                                          > region_start &
+                                            coverage_one_sample$start < region_end), ]
+cov_on_phage$cov_smoothed <- rollmean(cov_on_phage$score, smoothing, na.pad = TRUE)
+
+cov_on_phage$phase_num <- NULL
+cov_on_phage$width <- NULL
+cov_on_phage$strand <- NULL
+cov_on_phage$score <- NULL
+cov_on_phage$phase <- NULL
+
+cov_on_phage_median <- aggregate(cov_smoothed ~  start + mouse.group + day,
+                               FUN = "median", 
+                               data = cov_on_phage)
+cov_on_phage_iqr <- aggregate(cov_smoothed ~  start + mouse.group + day,
+                                  FUN = "IQR", 
+                                  data = cov_on_phage)
+stopifnot(all(cov_on_phage_median$start == cov_on_phage_iqr$start))
+cov_on_phage_median$iqr <- cov_on_phage_iqr$cov_smoothed
+
+cov_on_only_phage <- cov_on_phage_median[which(cov_on_phage_median$start
+                                                > phage_start &
+                                                 cov_on_phage_median$start < phage_end), ]
+
+# get mean coverage within phage region
+cov_on_phage_median2 <- aggregate(cov_smoothed ~ mouse.group + day,
+                               FUN = "median", 
+                               data = cov_on_phage_median)
+cov_on_only_phage_median <- aggregate(cov_smoothed ~ mouse.group + day,
+                               FUN = "median", 
+                               data = cov_on_only_phage)
+
+
+######
+cov_on_phage_median2$inside <- cov_on_only_phage_median$cov_smoothed
+cov_on_phage_median2$region <- "region_2"
+fc_list[["region_2"]] <- cov_on_phage_median2
+
+p <- ggplot(cov_on_phage_median2, aes(y = cov_smoothed, 
+                                      ymin = cov_smoothed,
+                                      x = day, 
+                                      ymax = inside, 
+                                      group = mouse.group, 
+                                      color = mouse.group))
+p <- p + geom_line()
+p <- p + facet_grid(mouse.group ~. )
+
+p <- p + geom_rect(xmin = 0, xmax = 4,ymin = -Inf, ymax = Inf, color = "grey95", fill = "grey95", alpha = .1) 
+p <- p + geom_rect(xmin = 14, xmax = 18,ymin = -Inf, ymax = Inf,  color = "grey95", fill = "grey95", alpha = .1) 
+p <- p + geom_rect(xmin = 49, xmax = 53,ymin = -Inf, ymax = Inf,  color = "grey95", fill = "grey95", alpha = .1) 
+p <- p + geom_rect(xmin = 64, xmax = 68,ymin = -Inf, ymax = Inf,  color = "grey95", fill = "grey95", alpha = .1) 
+p <- p + geom_ribbon(aes(ymin=cov_smoothed, ymax=inside,
+                         x = day, fill = mouse.group), alpha = 0.3)
+
+p <- p + ggtitle("Bacteroides caecimuris (putative prophage 1)")
+p <- p + theme_pmuench(base_size = 9) + xlab("Day") + ylab("Coverage")
+p <- p + scale_color_manual(name = "Group", values= c("Control" = "#476090",
+                                                      "Ciprofloxacin" = "#E0A91B",
+                                                      "Tetracyclin" = "#385337",
+                                                      "Vancomycin" = "#8C3701"))
+p <- p + scale_fill_manual(name = "Group", values= c("Control" = "#476090",
+                                                     "Ciprofloxacin" = "#E0A91B",
+                                                     "Tetracyclin" = "#385337",
+                                                     "Vancomycin" = "#8C3701"))
+
+pdf("Figure_4_d.pdf", width = 5, height = 3.5)
+print(p)
+dev.off()
+```
+
+## Pane E
+
+```{r}
+region_start <- 4000000
+region_end <- 4150000
+phage_start <- 4060000
+phage_end <- 4105000
+
+smoothing <- 50
+
+data("oligomm_ab_coverage_Bacteroides_caecimuris_I48")
+coverage_one_sample <- oligomm_ab_coverage_Bacteroides_caecimuris_I48
+
+# Filter by position
+cov_on_phage <- coverage_one_sample[which(coverage_one_sample$start
+                                          > region_start &
+                                            coverage_one_sample$start < region_end), ]
+cov_on_phage$cov_smoothed <- rollmean(cov_on_phage$score, smoothing, na.pad = TRUE)
+
+cov_on_phage$phase_num <- NULL
+cov_on_phage$width <- NULL
+cov_on_phage$strand <- NULL
+cov_on_phage$score <- NULL
+cov_on_phage$phase <- NULL
+
+cov_on_phage_median <- aggregate(cov_smoothed ~  start + mouse.group + day,
+                               FUN = "median", 
+                               data = cov_on_phage)
+cov_on_phage_iqr <- aggregate(cov_smoothed ~  start + mouse.group + day,
+                                  FUN = "IQR", 
+                                  data = cov_on_phage)
+stopifnot(all(cov_on_phage_median$start == cov_on_phage_iqr$start))
+cov_on_phage_median$iqr <- cov_on_phage_iqr$cov_smoothed
+
+cov_on_only_phage <- cov_on_phage_median[which(cov_on_phage_median$start
+                                                > phage_start &
+                                                 cov_on_phage_median$start < phage_end), ]
+
+# get mean coverage within phage region
+cov_on_phage_median2 <- aggregate(cov_smoothed ~ mouse.group + day,
+                               FUN = "median", 
+                               data = cov_on_phage_median)
+cov_on_only_phage_median <- aggregate(cov_smoothed ~ mouse.group + day,
+                               FUN = "median", 
+                               data = cov_on_only_phage)
+
+######
+cov_on_phage_median2$inside <- cov_on_only_phage_median$cov_smoothed
+cov_on_phage_median2$region <- "region_3"
+fc_list[["region_3"]] <- cov_on_phage_median2
+p <- ggplot(cov_on_phage_median2, aes(y = cov_smoothed, 
+                                      ymin = cov_smoothed,
+                                      x = day, 
+                                      ymax = inside, 
+                                      group = mouse.group, 
+                                      color = mouse.group))
+p <- p + geom_line()
+p <- p + facet_grid(mouse.group ~. )
+
+p <- p + geom_rect(xmin = 0, xmax = 4,ymin = -Inf, ymax = Inf, color = "grey95", fill = "grey95", alpha = .1) 
+p <- p + geom_rect(xmin = 14, xmax = 18,ymin = -Inf, ymax = Inf,  color = "grey95", fill = "grey95", alpha = .1) 
+p <- p + geom_rect(xmin = 49, xmax = 53,ymin = -Inf, ymax = Inf,  color = "grey95", fill = "grey95", alpha = .1) 
+p <- p + geom_rect(xmin = 64, xmax = 68,ymin = -Inf, ymax = Inf,  color = "grey95", fill = "grey95", alpha = .1) 
+p <- p + geom_ribbon(aes(ymin=cov_smoothed, ymax=inside,
+                         x = day, fill = mouse.group), alpha = 0.3)
+
+p <- p + ggtitle("Bacteroides caecimuris (putative prophage 1)")
+p <- p + theme_pmuench(base_size = 9) + xlab("Day") + ylab("Coverage")
+p <- p + scale_color_manual(name = "Group", values= c("Control" = "#476090",
+                                                      "Ciprofloxacin" = "#E0A91B",
+                                                      "Tetracyclin" = "#385337",
+                                                      "Vancomycin" = "#8C3701"))
+p <- p + scale_fill_manual(name = "Group", values= c("Control" = "#476090",
+                                                     "Ciprofloxacin" = "#E0A91B",
+                                                     "Tetracyclin" = "#385337",
+                                                     "Vancomycin" = "#8C3701"))
+
+pdf("Figure_4_e.pdf", width = 5, height = 3.5)
+print(p)
+dev.off()
+```
+## Panel correlation phage with qPCR difference
+
+```{r, eval=FALSE}
+phage_list <- do.call("rbind", fc_list)
+phage_list$fc <- phage_list$inside/ phage_list$cov_smoothed 
+
+p <- ggplot(phage_list, aes(x = cov_smoothed, y = inside, color = region)) + geom_point(shape = 21)
+p
+```
+

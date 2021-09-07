@@ -1,0 +1,62 @@
+---
+title: "Figure 5"
+output: html_document
+---
+
+```{r, eval=FALSE}
+devtools::install_github("philippmuench/OligoMMR")
+```
+
+```{r}
+library(OligoMMR)
+library(dplyr)
+library(tidyr)
+library(ComplexHeatmap)
+data(oligomm_ab_isolates)
+data(oligomm_ab_wgs)
+```
+
+```{r}
+df <- data.frame(
+    snp_id = oligomm_ab_isolates$snp_id,
+    AF = oligomm_ab_isolates$AF,
+    feature = oligomm_ab_isolates$feature,
+    genome_hr = oligomm_ab_isolates$genome_hr,
+    sample_id = paste0(oligomm_ab_isolates$sample))
+
+head(df)
+```
+```{r}
+df_wide <- spread(df, key = sample_id, value = AF)
+df_wide[is.na(df_wide)] <- 0
+df$num <- 1
+df_agg <- aggregate(data = df, num ~ genome_hr + sample_id, FUN = sum)
+```
+
+```{r}
+library(ggplot2)
+p <- ggplot(df_agg, aes(x = reorder(genome_hr, num), y = num))
+p <- p + geom_boxplot() + geom_jitter(size = 1) + coord_flip()
+p <- p + theme_pmuench(base_size = 9) + scale_y_log10()
+p <- p + xlab("") + ylab("Number of SNPs in genomic isolates")
+p
+```
+
+```{r}
+col_fun <- circlize::colorRamp2(c(0, 0.5, 1), c("white", "orange", "red"))
+```
+
+```{r}
+unique(oligomm_ab_isolates$genome_hr)
+```
+
+## Panel A
+
+```{r}
+ht <- OligoMMR::create_heatmap_iso(iso_profile = oligomm_ab_isolates,
+  wgs_profile = oligomm_ab_wgs,
+  genome_hr = "C. innocuum",
+  col_fun = col_fun,
+  filtered = T)
+ht
+```

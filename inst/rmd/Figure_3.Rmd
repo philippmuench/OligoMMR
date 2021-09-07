@@ -1,0 +1,370 @@
+---
+title: "Figure 3 (Growth rates)"
+output: html_document
+---
+
+```{r, eval=FALSE}
+devtools::install_github("philippmuench/OligoMMR")
+```
+
+```{r}
+library(OligoMMR)
+data(oligomm_ab_wgs_imputed_long)
+data(oligomm_ab_coverage_Akkermansia_muciniphila_YL44)
+```
+
+```{r}
+coverage <- oligomm_ab_coverage_Akkermansia_muciniphila_YL44
+mouse_id = "1681"
+day = "0"
+first_smoothing = 5000
+cov_smoothing = 100
+title = "Coverage"
+  
+max_cov <-  as.data.frame(
+    coverage[which(coverage$mouse.id == mouse_id), ])
+  max_all_days <- max(max_cov$score)
+  min_all_days <- min(max_cov$score)
+
+coverage_one_sample <- as.data.frame(
+    coverage[which(coverage$day == day &
+                     coverage$mouse.id == mouse_id), ])
+
+#phage_subset <- phage_df[which(phage_df$chr == chr),]
+
+cov_reduced <- data.frame(start = rollapply(coverage_one_sample$start,
+                                              width = first_smoothing,
+                                              by = first_smoothing,
+                                              FUN = min, align = "left"),
+                            end = rollapply(coverage_one_sample$end,
+                                           width = first_smoothing,
+                                           by = first_smoothing,
+                                           FUN = max, align = "left"),
+                            cov = rollapply(coverage_one_sample$score,
+                                            width = first_smoothing,
+                                            by = first_smoothing,
+                                            FUN = median, align = "left"))
+
+cov_reduced2 <- data.frame(start = rollapply(coverage_one_sample$start,
+                                               width = cov_smoothing,
+                                               by = cov_smoothing,
+                                               FUN = min, align = "left"),
+                             end =rollapply(coverage_one_sample$end,
+                                            width = cov_smoothing,
+                                            by = cov_smoothing,
+                                            FUN = max, align = "left"),
+                             cov = rollapply(coverage_one_sample$score,
+                                             width = cov_smoothing,
+                                             by = cov_smoothing,
+                                             FUN = median, align = "left"))
+
+p <- ggplot(cov_reduced, aes(x = start,  y = cov ))
+p <- p + geom_smooth(formular = y ~ x + I(x^2), color = "red", size = 2)
+ld <- layer_data(p)
+ld <- ld[c(which.max(ld$y), which.min(ld$y)), ]s
+#p <- p + geom_vline(data = phage_subset, aes(xintercept = start), color = "blue", size = .5, alpha = .5)
+#p <- p + geom_vline(data = phage_subset, aes(xintercept = end), color = "blue", size = .5, alpha = .5)
+p <- p + geom_line(data = cov_reduced2, aes(x = start, y = cov), size = .5)
+p <- p + geom_line(data = cov_reduced, aes(x = start, y = cov), size = .5, color = "blue")
+p <- p + theme_bw()
+# p <- p + theme_pmuench(base_size = 9)
+p <- p + scale_y_log10()
+p <- p + ggtitle(paste0("Day: ", day, "; PT:",
+                          round(max(ld$y) / min(ld$y), digits= 2)))
+p <- p + xlab("Genome position") + ylab("Coverage")
+p <- p + geom_hline(yintercept = ld$y, linetype = 2, color = "red", size = .5)
+p
+```
+
+```{r}
+coverage <- oligomm_ab_coverage_Akkermansia_muciniphila_YL44
+mouse_id = "1683"
+day = "9"
+first_smoothing = 5000
+cov_smoothing = 100
+title = "Coverage"
+  
+  
+max_cov <-  as.data.frame(
+    coverage[which(coverage$mouse.id == mouse_id), ])
+  max_all_days <- max(max_cov$score)
+  min_all_days <- min(max_cov$score)
+
+coverage_one_sample <- as.data.frame(
+    coverage[which(coverage$day == day &
+                     coverage$mouse.id == mouse_id), ])
+
+#phage_subset <- phage_df[which(phage_df$chr == chr),]
+
+cov_reduced <- data.frame(start = rollapply(coverage_one_sample$start,
+                                              width = first_smoothing,
+                                              by = first_smoothing,
+                                              FUN = min, align = "left"),
+                            end = rollapply(coverage_one_sample$end,
+                                           width = first_smoothing,
+                                           by = first_smoothing,
+                                           FUN = max, align = "left"),
+                            cov = rollapply(coverage_one_sample$score,
+                                            width = first_smoothing,
+                                            by = first_smoothing,
+                                            FUN = median, align = "left"))
+
+cov_reduced2 <- data.frame(start = rollapply(coverage_one_sample$start,
+                                               width = cov_smoothing,
+                                               by = cov_smoothing,
+                                               FUN = min, align = "left"),
+                             end =rollapply(coverage_one_sample$end,
+                                            width = cov_smoothing,
+                                            by = cov_smoothing,
+                                            FUN = max, align = "left"),
+                             cov = rollapply(coverage_one_sample$score,
+                                             width = cov_smoothing,
+                                             by = cov_smoothing,
+                                             FUN = median, align = "left"))
+
+p <- ggplot(cov_reduced, aes(x = start,  y = cov ))
+p <- p + geom_smooth(formular = y ~ x + I(x^2), color = "red", size = 2)
+ld <- layer_data(p)
+ld <- ld[c(which.max(ld$y), which.min(ld$y)), ]
+#p <- p + geom_vline(data = phage_subset, aes(xintercept = start), color = "blue", size = .5, alpha = .5)
+#p <- p + geom_vline(data = phage_subset, aes(xintercept = end), color = "blue", size = .5, alpha = .5)
+p <- p + geom_line(data = cov_reduced2, aes(x = start, y = cov), size = .5)
+p <- p + geom_line(data = cov_reduced, aes(x = start, y = cov), size = .5, color = "blue")
+p <- p + theme_bw()
+p <- p + theme_pmuench(base_size = 9)
+p <- p + scale_y_log10()
+p <- p + ggtitle(paste0("Day: ", day, "; PT:",
+                          round(max(ld$y) / min(ld$y), digits= 2)))
+p <- p + xlab("Genome position") + ylab("Coverage")
+p <- p + geom_hline(yintercept = ld$y, linetype = 2, color = "red", size = .5)
+
+p <- p + geom_vline(xintercept =  667212)
+p
+```
+
+```{r}
+
+```
+
+```{r}
+coverage <- oligomm_ab_coverage_Akkermansia_muciniphila_YL44
+
+ratio <- list()
+for (mouse in c("1683","1684", "1686", "1688", "1690",
+                  "1692", "1693", "1694", "1697", "1698", "1699")) {
+  for (day in unique(coverage$day)){
+    message(paste(mouse, day))
+    p <- p2tPlot(coverage = coverage,
+                     day = day,
+                     mouse_id = mouse)
+      
+    df <- data.frame(mouse = mouse,
+                     day = day,
+                     ratio = p$ratio)
+    ratio[[paste0(day, mouse)]] <- df
+  }
+}
+ 
+res <- do.call("rbind", ratio)
+  
+res$group <- translateMouseIdToTreatmentGroup(res$mouse)
+res <- res[which(!is.na(res$ratio)),]
+  
+res_median <- aggregate(ratio ~ day + group,
+                          FUN = "median",
+                          data = res)
+res_iqr <- aggregate(ratio ~  day + group,
+                         FUN = "IQR",
+                         data = res)
+res$dummy <- 1
+res_obs <- aggregate(dummy ~  day + group,
+                      FUN = sum,
+                      data = res)
+
+res_median$iqr <- res_iqr$ratio
+res_median$obs <- res_obs$dummy
+res_median$obs <- ifelse(res_median$obs == 1, "single observation", "replicate")
+    
+p <- ggplot(res_median, aes(x = day, y = ratio))
+p <- p + geom_rect(xmin = 0, xmax = 4,ymin = -Inf, ymax = Inf, color = "grey95", fill = "grey95", alpha = .1)
+p <- p + geom_rect(xmin = 14, xmax = 18,ymin = -Inf, ymax = Inf,  color = "grey95", fill = "grey95", alpha = .1)
+p <- p + geom_rect(xmin = 49, xmax = 53,ymin = -Inf, ymax = Inf,  color = "grey95", fill = "grey95", alpha = .1)
+p <- p + geom_rect(xmin = 64, xmax = 68,ymin = -Inf, ymax = Inf,  color = "grey95", fill = "grey95", alpha = .1)
+p <- p + geom_point(aes(color = group, shape = factor(obs))) + geom_line(aes(color = group))
+    #p <- p + geom_ribbon(aes(ymin=ratio - iqr, ymax=ratio + iqr,
+    #                         x = day, fill = group), alpha = 0.3)
+p <- p + geom_errorbar(aes(x = day, ymin = ratio - iqr,
+                               ymax = ratio + iqr,
+                               color = group), width = .3)
+p <- p + scale_shape_manual(name = "Type", values = c("single observation" = 1,
+                                                          "replicate" = 16))
+  # p <- p + theme_pmuench(base_size = 9)
+p <- p + scale_color_manual(name = "Group", values= c("Control" = "#476090",
+                                                          "Ciprofloxacin" = "#E0A91B",
+                                                          "Tetracyclin" = "#385337",
+                                                          "Vancomycin" = "#8C3701"))
+p <- p + scale_fill_manual(name = "Group", values= c("Control" = "#476090",
+                                                         "Ciprofloxacin" = "#E0A91B",
+                                                         "Tetracyclin" = "#385337",
+                                                         "Vancomycin" = "#8C3701"))
+p <- p + theme(aspect.ratio = .5)
+#+ geom_smooth()
+p <- p + xlab("Day") + ylab("P2T ratio")
+p <- p + ggtitle(paste0("Estimated growth rates"))
+p <- p + facet_wrap( ~ group)
+p <- p + theme_pmuench(base_size = 7)
+
+pdf(paste0("Figure_3_a.pdf"), width = 5, height = 4)
+print(p)
+dev.off()
+```
+```{r}
+ratio <- list()
+genome <- "Bacteroides_caecimuris_I48"
+data("oligomm_ab_coverage_Bacteroides_caecimuris_I48")
+coverage <- oligomm_ab_coverage_Bacteroides_caecimuris_I48
+for (mouse in c("1683","1684", "1686", "1688", "1690",
+                  "1692", "1693", "1694", "1697", "1698", "1699")) {
+  for (day in unique(coverage$day)) {
+    message(paste(mouse, day))
+    p <- p2tPlot(coverage = coverage,
+                     day = day,
+                     mouse_id = mouse)
+    df <- data.frame(mouse = mouse,
+                     chr = genome,
+                     day = day,
+                     ratio = p$ratio)
+    ratio[[paste0(day, mouse, genome)]] <- df
+  }
+}
+
+genome <- "Blautia_coccoides_YL58"
+data("oligomm_ab_coverage_Blautia_coccoides_YL58")
+coverage <- oligomm_ab_coverage_Blautia_coccoides_YL58
+for (mouse in c("1683","1684", "1686", "1688", "1690",
+                  "1692", "1693", "1694", "1697", "1698", "1699")) {
+  for (day in unique(coverage$day)) {
+    message(paste(mouse, day))
+    p <- p2tPlot(coverage = coverage,
+                     day = day,
+                     mouse_id = mouse)
+      
+    df <- data.frame(mouse = mouse,
+                     chr = genome,
+                     day = day,
+                     ratio = p$ratio)
+    ratio[[paste0(day, mouse, genome)]] <- df
+  }
+}
+ 
+genome <- "Limosilactobacillus_reuteri_I49"
+data("oligomm_ab_coverage_Limosilactobacillus_reuteri_I49")
+coverage <- oligomm_ab_coverage_Limosilactobacillus_reuteri_I49
+for (mouse in c("1683","1684", "1686", "1688", "1690",
+                  "1692", "1693", "1694", "1697", "1698", "1699")) {
+  for (day in unique(coverage$day)) {
+    message(paste(mouse, day))
+    p <- p2tPlot(coverage = coverage,
+                     day = day,
+                     mouse_id = mouse)
+      
+    df <- data.frame(mouse = mouse,
+                     chr = genome,
+                     day = day,
+                     ratio = p$ratio)
+    ratio[[paste0(day, mouse, genome)]] <- df
+  }
+}
+
+genome <- "Clostridium_innocuum_I46"
+data("oligomm_ab_coverage_Clostridium_innocuum_I46")
+coverage <- oligomm_ab_coverage_Clostridium_innocuum_I46
+for (mouse in c("1683","1684", "1686", "1688", "1690",
+                  "1692", "1693", "1694", "1697", "1698", "1699")) {
+  for (day in unique(coverage$day)) {
+    message(paste(mouse, day))
+    p <- p2tPlot(coverage = coverage,
+                     day = day,
+                     mouse_id = mouse)
+    df <- data.frame(mouse = mouse,
+                     chr = genome,
+                     day = day,
+                     ratio = p$ratio)
+    ratio[[paste0(day, mouse, genome)]] <- df
+  }
+}
+
+genome <- "Flavonifractor_plautii_YL31"
+data("oligomm_ab_coverage_Flavonifractor_plautii_YL31")
+coverage <- oligomm_ab_coverage_Flavonifractor_plautii_YL31
+for (mouse in c("1683","1684", "1686", "1688", "1690",
+                  "1692", "1693", "1694", "1697", "1698", "1699")) {
+  for (day in unique(coverage$day)) {
+    message(paste(mouse, day))
+    p <- p2tPlot(coverage = coverage,
+                     day = day,
+                     mouse_id = mouse)
+    df <- data.frame(mouse = mouse,
+                     chr = genome,
+                     day = day,
+                     ratio = p$ratio)
+    ratio[[paste0(day, mouse, genome)]] <- df
+  }
+}
+
+
+genome <- "Enterocloster_clostridioformis_YL32"
+data("oligomm_ab_coverage_Enterocloster_clostridioformis_YL32")
+coverage <- oligomm_ab_coverage_Enterocloster_clostridioformis_YL32
+for (mouse in c("1683","1684", "1686", "1688", "1690",
+                  "1692", "1693", "1694", "1697", "1698", "1699")) {
+  for (day in unique(coverage$day)) {
+    message(paste(mouse, day))
+    p <- p2tPlot(coverage = coverage,
+                     day = day,
+                     mouse_id = mouse)
+    df <- data.frame(mouse = mouse,
+                     chr = genome,
+                     day = day,
+                     ratio = p$ratio)
+    ratio[[paste0(day, mouse, genome)]] <- df
+  }
+}
+
+
+res <- do.call("rbind", ratio)
+
+
+res$group <- translateMouseIdToTreatmentGroup(res$mouse)
+
+res <- as.data.frame(res)
+
+res_agg <- aggregate(ratio ~ chr + day + group,
+                          FUN = "mean",
+                          data = res)
+
+p <- ggplot(res_agg, aes(x = day, y = ratio))
+p <- p + geom_rect(xmin = 0, xmax = 4,ymin = -Inf, ymax = Inf, color = "grey95", fill = "grey95", alpha = .1)
+p <- p + geom_rect(xmin = 14, xmax = 18,ymin = -Inf, ymax = Inf,  color = "grey95", fill = "grey95", alpha = .1)
+p <- p + geom_rect(xmin = 49, xmax = 53,ymin = -Inf, ymax = Inf,  color = "grey95", fill = "grey95", alpha = .1)
+p <- p + geom_rect(xmin = 64, xmax = 68,ymin = -Inf, ymax = Inf,  color = "grey95", fill = "grey95", alpha = .1)
+p <- p + scale_color_manual(name = "Group", values= c("Control" = "#476090",
+                                                          "Ciprofloxacin" = "#E0A91B",
+                                                          "Tetracyclin" = "#385337",
+                                                          "Vancomycin" = "#8C3701"))
+p <- p + scale_fill_manual(name = "Group", values = c("Control" = "#476090",
+                                                         "Ciprofloxacin" = "#E0A91B",
+                                                         "Tetracyclin" = "#385337",
+                                                         "Vancomycin" = "#8C3701"))
+p <- p + geom_line(aes(color = group))
+p <- p + theme(aspect.ratio = .5)
+p <- p + theme_pmuench(base_size = 7)
+p <- p + xlab("Day") + ylab("P2T ratio")
+
+p <- p + facet_wrap( ~ chr, ncol = 6)
+p
+pdf("Figure_3_b.pdf", width = 7, height = 1.5)
+print(p)
+dev.off()
+```
+

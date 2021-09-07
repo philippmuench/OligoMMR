@@ -1,0 +1,483 @@
+---
+title: "Figure 5"
+output: html_document
+---
+
+```{r, eval=FALSE}
+devtools::install_github("philippmuench/OligoMMR")
+```
+
+```{r}
+library(OligoMMR)
+library(dplyr)
+library(tidyr)
+library(ComplexHeatmap)
+data(oligomm_ab_wgs_imputed_wide)
+data(oligomm_ab_isolates)
+data(oligomm_ab_mic)
+```
+
+```{r}
+df <- data.frame(
+    snp_id = oligomm_ab_isolates$snp_id,
+    AF = oligomm_ab_isolates$AF,
+    feature = oligomm_ab_isolates$feature,
+    genome_hr = oligomm_ab_isolates$genome_hr,
+    sample_id = paste0(oligomm_ab_isolates$sample))
+```
+
+```{r}
+df_wide <- spread(df, key = sample_id, value = AF)
+df_wide[is.na(df_wide)] <- 0
+df$num <- 1
+df_agg <- aggregate(data = df, num ~ genome_hr + sample_id, FUN = sum)
+```
+
+
+```{r}
+col_fun <- circlize::colorRamp2(c(0, 0.5, 1), c("white", "orange", "red"))
+col_fun2 <- circlize::colorRamp2(c(0, 0.5, 1), c("white", "grey50", "black"))
+col_fun_mic <- circlize::colorRamp2(c(0, 16, 256), c("white", "orange", "darkred"))
+col_fun_mic2 <- circlize::colorRamp2(c(0, 25, 50), c("white", "orange", "darkred"))
+
+unique(oligomm_ab_isolates$genome_hr)
+```
+
+## Panel A
+
+```{r}
+
+# filter by significant ones
+#oligomm_ab_wgs_imputed_wide <- oligomm_ab_wgs_imputed_wide[which(oligomm_ab_wgs_imputed_wide$p_ciprofloxacin < 0.5 |
+#                                                                   oligomm_ab_wgs_imputed_wide$p_tetracyclin < 0.5 |
+#                                                                   oligomm_ab_wgs_imputed_wide$p_vancomycin < 0.5),]
+
+# filter by annotation
+ oligomm_ab_wgs_imputed_wide <- oligomm_ab_wgs_imputed_wide[which(oligomm_ab_wgs_imputed_wide$feature != "outside ORFs" &
+                                                                   oligomm_ab_wgs_imputed_wide$feature != "hypothetical protein"),]
+
+
+# Add a unique SNP id e.g. Akkermansia_muciniphila_YL44-1126695-C-T
+oligomm_ab_wgs_imputed_wide$long_snp_id <- paste0(oligomm_ab_wgs_imputed_wide$chr,
+                                                  "-", oligomm_ab_wgs_imputed_wide$POS,
+                                                  "-", oligomm_ab_wgs_imputed_wide$ALT,
+                                                  "-", oligomm_ab_wgs_imputed_wide$REF)
+
+# Process isolates df
+oligomm_ab_isolates$QUAL <- NULL
+oligomm_ab_isolates$DP <- NULL
+oligomm_ab_isolates$majorAF <- NULL
+
+oligomm_ab_isolates_wide <- spread(oligomm_ab_isolates, key = sample, value = AF)
+
+# same for isolates, somewhere REF and ALT is switched
+oligomm_ab_isolates_wide$long_snp_id <- paste0(oligomm_ab_isolates_wide$chr,
+                                                  "-", oligomm_ab_isolates_wide$POS,
+                                                  "-", oligomm_ab_isolates_wide$REF,
+                                                  "-", oligomm_ab_isolates_wide$ALT)
+
+# we have 12 SNPs that are significant in WGS and reach fixation
+length(which(oligomm_ab_isolates_wide$long_snp_id %in% oligomm_ab_wgs_imputed_wide$long_snp_id))
+
+fixed_merged <- merge(oligomm_ab_wgs_imputed_wide, oligomm_ab_isolates_wide, by = "long_snp_id") 
+
+# WGS
+wgs_subset <- fixed_merged[, grep("-", colnames(fixed_merged))]
+iso_subset <- fixed_merged[, c(grep("^DR", colnames(fixed_merged)), 
+                             grep("^SW", colnames(fixed_merged))) ]
+annot_subset <- fixed_merged[, 1:24]
+rownames(wgs_subset) <- paste0(annot_subset$feature.x)
+
+effect_sizes <- annot_subset[,18:20]
+
+
+#### Heatmap
+
+ha = rowAnnotation(effect_size = anno_points(effect_sizes),
+                   col = list(effect_size = c("effect_size_ciprofloxacin" = "red", "effect_size_tetracyclin" = "green", "effect_size_vancomycin" = "blue")))
+
+# Day annotation
+day_annot_1 <- ifelse(binDaysByPhase(
+  as.integer(substr(colnames(wgs_subset),
+                    6, 7))) == "post-treatment", "*", "")
+# Reset signs for control
+day_annot_1[which(
+  translateMouseIdToTreatmentGroup(substr(colnames(wgs_subset),
+                                          1, 4)) == "Control")] <- "" 
+day_annot_2 <- as.integer(substr(colnames(wgs_subset), 6, 7))
+col_fun_ha <- circlize::colorRamp2(c(0, max(day_annot_2)), c("white", "grey50"))
+column_ha <- ComplexHeatmap::HeatmapAnnotation(day = anno_simple(day_annot_2,
+                                                 col = col_fun_ha,
+                                                 pch = day_annot_1,
+                                                 height = unit(.4, "cm"),
+                                                 border = TRUE),
+                                               show_annotation_name = F, 
+                               annotation_name_gp = gpar(fontsize = 6))
+
+
+ht1 <- ComplexHeatmap::Heatmap(data.matrix(wgs_subset), name = "AF",
+               cluster_rows = F,
+              row_title_rot = 90,
+               na_col = "grey80",
+              # right_annotation = ha,
+               cluster_columns = F,
+               row_gap = unit(0, "mm"),
+               row_split = annot_subset$chr.x,
+               top_annotation = column_ha,
+               column_gap = unit(1, "mm"),
+               show_row_names = T,
+               row_names_side = "left",
+               col = col_fun,
+               show_row_dend = F,
+               show_column_names = F,
+               row_title_gp = gpar(fontsize = 4),
+               width = 10,
+              column_title_gp = gpar(col = "black", fontsize = 6, fontface = "bold"),
+               border_gp = gpar(col = "black", lty = 1),
+               gap = unit(0, "mm"),
+               column_names_gp = gpar(fontsize = 4),
+               row_names_gp = gpar(fontsize = 4),
+               column_split = factor(translateMouseIdToTreatmentGroup(substr(colnames(wgs_subset),1,4)),
+                levels = c("Control", "Ciprofloxacin", "Tetracyclin", "Vancomycin")) )
+
+# day annotation for isolates
+iso_subset <- as.matrix((iso_subset > 0) + 0)
+
+# Day annotation
+day_annot_2 <- rep(79, ncol(iso_subset))
+col_fun_ha <- circlize::colorRamp2(c(0, max(day_annot_2)), c("white", "grey50"))
+column_ha <- ComplexHeatmap::HeatmapAnnotation(day = anno_simple(day_annot_2,
+                                                 col = col_fun_ha,
+                                                 height = unit(.4, "cm"),
+                                                 border = TRUE),
+                               annotation_name_gp = gpar(fontsize = 6))
+
+# Column MIC annotation
+# get oligomm_ab_mic into the right shape
+annot_mic_Ciprofloxacin <- as.numeric(oligomm_ab_mic[match(colnames(iso_subset), 
+                              oligomm_ab_mic$sample),]$Ciprofloxacin)
+
+annot_mic_Tetracyclin <- as.numeric(oligomm_ab_mic[match(colnames(iso_subset), 
+                              oligomm_ab_mic$sample),]$Tetracyclin)
+
+annot_mic_Vancomycin <- as.numeric(oligomm_ab_mic[match(colnames(iso_subset), 
+                              oligomm_ab_mic$sample),]$Vancomycin)
+
+column_ha2 <- ComplexHeatmap::HeatmapAnnotation(MIC_Ciprofloxacin = anno_simple(annot_mic_Ciprofloxacin,
+                                                 col = col_fun_mic,
+                                                 height = unit(.1, "cm"),
+                                                 border = TRUE),
+                                                MIC_Tetracyclin = anno_simple(annot_mic_Tetracyclin,
+                                                 col = col_fun_mic,
+                                                 height = unit(.1, "cm"),
+                                                 border = TRUE),
+                                                 MIC_Vancomycin = anno_simple(annot_mic_Vancomycin,
+                                                 col = col_fun_mic,
+                                                 height = unit(.1, "cm"),
+                                                 border = TRUE),
+                                               show_annotation_name = T, 
+                                               show_legend = T,
+                               annotation_name_gp = gpar(fontsize = 6))
+
+ht2 <-  ComplexHeatmap::Heatmap(data.matrix(iso_subset), name = "isolates",
+               cluster_rows = F,
+               row_title_rot = 0,
+               na_col = "white",
+               cluster_columns = F,
+               bottom_annotation = column_ha2,
+               row_split = annot_subset$chr.x,
+               row_gap = unit(0, "mm"),
+               top_annotation = column_ha,
+             #  column_title = "variants in isolates",
+               column_title_gp = gpar(col = "darkblue", fontsize = 6, fontface = "bold"),
+               column_gap = unit(1, "mm"),
+               col = col_fun2,
+               show_row_dend = F,
+               show_column_names = T,
+               row_title_gp = gpar(fontsize = 4),
+               width = 5,
+               #column_title_gp = gpar(fontsize = 4),
+               border_gp = gpar(col = "darkblue", lty = 1),
+               gap = unit(0, "mm"),
+               column_names_gp = gpar(fontsize = 2),
+               row_names_gp = gpar(fontsize = 4),
+               show_heatmap_legend = T,
+             column_split = factor(translateMouseIdToTreatmentGroup(translateIsolateIDtoMouse(colnames(iso_subset))),
+                levels = c("Control", "Ciprofloxacin", "Tetracyclin", "Vancomycin"))
+             
+)
+            
+pdf("figure5.pdf", width = 12, height = 2)
+ht1 + ht2
+dev.off()
+```
+
+```{r}
+data(oligomm_ab_isolates)
+# Process isolates df
+oligomm_ab_isolates$QUAL <- NULL
+oligomm_ab_isolates$DP <- NULL
+oligomm_ab_isolates$majorAF <- NULL
+
+oligomm_ab_isolates_wide <- spread(oligomm_ab_isolates, key = sample, value = AF)
+
+iso_subset <- oligomm_ab_isolates_wide[, c(grep("^DR", colnames(oligomm_ab_isolates_wide)), 
+                             grep("^SW", colnames(oligomm_ab_isolates_wide))) ]
+annot_subset <- oligomm_ab_isolates_wide[, 1:24]
+ annot_subset$type <- "normal"
+ 
+# filter out median AF
+iso_subset <- data.matrix(iso_subset)
+annot_subset[which(apply(iso_subset, 1, median, na.rm = TRUE) > .1 &
+                    apply(iso_subset, 1, median, na.rm = TRUE) < .9), ]$type <- "intermediate"
+iso_subset <- iso_subset[which(annot_subset$type == "normal"),]
+annot_subset <- annot_subset[which(annot_subset$type == "normal"),]
+
+# filter out singeltons
+iso_subset <- as.matrix((iso_subset > 0) + 0) # set to 1
+keep <- which(rowSums(iso_subset, na.rm = T) > 1)
+iso_subset <- iso_subset[keep,]
+annot_subset <- annot_subset[keep,]
+
+iso_subset[is.na(iso_subset)] <- 0
+
+ht3 <-  ComplexHeatmap::Heatmap(data.matrix(iso_subset),
+                                name = "AF",
+                                row_title_rot = 0,
+                                row_split = annot_subset$genome_hr,
+                                cluster_rows = T,
+                                show_column_dend = F,
+                                show_row_dend = F,
+                                cluster_columns = T,
+                                show_column_names = F,
+                                col = col_fun2,
+                                border_gp = gpar(col = "darkblue", lty = 1),
+                                gap = unit(1, "mm"),
+                                column_names_gp = gpar(fontsize = 4),
+                                row_names_gp = gpar(fontsize = 4),
+                                na_col = "white",
+                                row_title_gp = gpar(fontsize = 4),
+                                column_title_gp = gpar(fontsize = 4),
+
+                                column_split =  factor(translateMouseIdToTreatmentGroup(translateIsolateIDtoMouse(colnames(iso_subset))),
+                levels = c("Control", "Ciprofloxacin", "Tetracyclin", "Vancomycin")))
+pdf("figure_5_panel_b.pdf", width = 3, height = 4)
+ht3
+dev.off()
+
+```
+
+Heatmap of stock AB sensitivity
+
+```{r}
+data("oligomm_ab_mic_community")
+
+oligomm_ab_mic_community
+oligomm_ab_mic_community$Kanamycin <- NULL
+
+ht4 <-  ComplexHeatmap::Heatmap(data.matrix(oligomm_ab_mic_community),
+                                name = "MIC",
+                                show_column_dend = F,
+                                show_row_dend = F,
+                                border_gp = gpar(col = "darkgreen", lty = 1),
+                                gap = unit(1, "mm"),
+                                column_names_gp = gpar(fontsize = 4),
+                                row_names_gp = gpar(fontsize = 4),
+                                na_col = "black",
+                                row_title_gp = gpar(fontsize = 4),
+                                column_title_gp = gpar(fontsize = 4),
+                                cluster_rows = F,
+                                col = col_fun_mic2,
+                                cluster_columns = T)
+
+pdf("figure_5_panel_c.pdf", width = 2, height = 1.8)
+ht4
+dev.off()
+```
+
+
+## C. innocuum
+
+```{r}
+data(oligomm_ab_isolates)
+# Process isolates df
+oligomm_ab_isolates$QUAL <- NULL
+oligomm_ab_isolates$DP <- NULL
+oligomm_ab_isolates$majorAF <- NULL
+
+oligomm_ab_isolates_wide <- spread(oligomm_ab_isolates, key = sample, value = AF)
+
+iso_subset <- oligomm_ab_isolates_wide[, c(grep("^DR", colnames(oligomm_ab_isolates_wide)), 
+                             grep("^SW", colnames(oligomm_ab_isolates_wide))) ]
+annot_subset <- oligomm_ab_isolates_wide[, 1:24]
+ annot_subset$type <- "normal"
+ 
+# filter out median AF
+iso_subset <- data.matrix(iso_subset)
+annot_subset[which(apply(iso_subset, 1, median, na.rm = TRUE) > .1 &
+                    apply(iso_subset, 1, median, na.rm = TRUE) < .9), ]$type <- "intermediate"
+iso_subset <- iso_subset[which(annot_subset$type == "normal"),]
+annot_subset <- annot_subset[which(annot_subset$type == "normal"),]
+
+# filter out singeltons
+iso_subset <- as.matrix((iso_subset > 0) + 0) # set to 1
+keep <- which(rowSums(iso_subset, na.rm = T) > 1)
+iso_subset <- iso_subset[keep,]
+annot_subset <- annot_subset[keep,]
+iso_subset[is.na(iso_subset)] <- 0
+
+bug <- translateGenomeIdToFullName(translateIsolateIDtoBug(colnames(iso_subset)))
+
+iso_subset2 <- iso_subset[,which(bug == "C. innocuum")]
+
+# only dendogram + annotations
+hc = hclust(dist(t(data.matrix(iso_subset2)),
+                 method = "euclidean"))
+
+row_ha = rowAnnotation(group = translateMouseIdToTreatmentGroup(translateIsolateIDtoMouse(colnames(iso_subset2))),
+                       SNPs = anno_points(colSums(iso_subset2)),
+                       col = list(group = c("Control" = "#476090", "Ciprofloxacin" = "#E0A91B", "Tetracyclin" = "#385337", "Vancomycin" = "#8C3701")))
+
+ht4 <- Heatmap(matrix(nc = 0,
+                      nr = ncol(iso_subset2)), 
+        cluster_rows = hc, 
+        row_dend_width = unit(4, "cm"),
+        row_dend_gp = gpar(col = "black",  lwd = 2),
+        row_title = "C. innocuum",
+       # cluster_rows = row_dend,
+        show_row_names = T,
+       rect_gp = gpar(col = "white", lwd = 5),
+      row_title_gp = gpar(fontsize = 8),
+                                column_title_gp = gpar(fontsize = 4),
+        border_gp = gpar(col = "darkgreen", lty = 1),
+                                gap = unit(1, "mm"),
+    right_annotation = row_ha)
+
+
+pdf("figure5_dend_c_in.pdf", width = 10, height = 10)
+ht4
+dev.off()
+```
+
+## E. faecalis
+
+```{r}
+data(oligomm_ab_isolates)
+# Process isolates df
+oligomm_ab_isolates$QUAL <- NULL
+oligomm_ab_isolates$DP <- NULL
+oligomm_ab_isolates$majorAF <- NULL
+
+oligomm_ab_isolates_wide <- spread(oligomm_ab_isolates, key = sample, value = AF)
+
+iso_subset <- oligomm_ab_isolates_wide[, c(grep("^DR", colnames(oligomm_ab_isolates_wide)), 
+                             grep("^SW", colnames(oligomm_ab_isolates_wide))) ]
+annot_subset <- oligomm_ab_isolates_wide[, 1:24]
+ annot_subset$type <- "normal"
+ 
+# filter out median AF
+iso_subset <- data.matrix(iso_subset)
+annot_subset[which(apply(iso_subset, 1, median, na.rm = TRUE) > .1 &
+                    apply(iso_subset, 1, median, na.rm = TRUE) < .9), ]$type <- "intermediate"
+iso_subset <- iso_subset[which(annot_subset$type == "normal"),]
+annot_subset <- annot_subset[which(annot_subset$type == "normal"),]
+
+# filter out singeltons
+iso_subset <- as.matrix((iso_subset > 0) + 0) # set to 1
+keep <- which(rowSums(iso_subset, na.rm = T) > 1)
+iso_subset <- iso_subset[keep,]
+annot_subset <- annot_subset[keep,]
+iso_subset[is.na(iso_subset)] <- 0
+
+bug <- translateGenomeIdToFullName(translateIsolateIDtoBug(colnames(iso_subset)))
+
+iso_subset2 <- iso_subset[,which(bug == "E. faecalis")]
+
+# only dendogram + annotations
+hc = hclust(dist(t(data.matrix(iso_subset2)),
+                 method = "euclidean"))
+
+row_ha = rowAnnotation(group = translateMouseIdToTreatmentGroup(translateIsolateIDtoMouse(colnames(iso_subset2))),
+                       SNPs = anno_points(colSums(iso_subset2)),
+                       col = list(group = c("Control" = "#476090", "Ciprofloxacin" = "#E0A91B", "Tetracyclin" = "#385337", "Vancomycin" = "#8C3701")))
+
+ht4 <- Heatmap(matrix(nc = 0,
+                      nr = ncol(iso_subset2)), 
+        cluster_rows = hc, 
+        row_dend_width = unit(4, "cm"),
+        row_dend_gp = gpar(col = "black",  lwd = 2),
+        row_title = "C. innocuum",
+       # cluster_rows = row_dend,
+        show_row_names = T,
+       rect_gp = gpar(col = "white", lwd = 5),
+      row_title_gp = gpar(fontsize = 8),
+                                column_title_gp = gpar(fontsize = 4),
+        border_gp = gpar(col = "darkgreen", lty = 1),
+                                gap = unit(1, "mm"),
+    right_annotation = row_ha)
+
+
+pdf("figure5_dend_c_in.pdf", width = 10, height = 10)
+ht4
+dev.off()
+```
+
+
+
+```{r}
+data(oligomm_ab_isolates)
+# Process isolates df
+oligomm_ab_isolates$QUAL <- NULL
+oligomm_ab_isolates$DP <- NULL
+oligomm_ab_isolates$majorAF <- NULL
+
+oligomm_ab_isolates_wide <- spread(oligomm_ab_isolates, key = sample, value = AF)
+
+iso_subset <- oligomm_ab_isolates_wide[, c(grep("^DR", colnames(oligomm_ab_isolates_wide)), 
+                             grep("^SW", colnames(oligomm_ab_isolates_wide))) ]
+annot_subset <- oligomm_ab_isolates_wide[, 1:24]
+ annot_subset$type <- "normal"
+ 
+# filter out median AF
+iso_subset <- data.matrix(iso_subset)
+annot_subset[which(apply(iso_subset, 1, median, na.rm = TRUE) > .1 &
+                    apply(iso_subset, 1, median, na.rm = TRUE) < .9), ]$type <- "intermediate"
+iso_subset <- iso_subset[which(annot_subset$type == "normal"),]
+annot_subset <- annot_subset[which(annot_subset$type == "normal"),]
+
+# filter out singeltons
+iso_subset <- as.matrix((iso_subset > 0) + 0) # set to 1
+keep <- which(rowSums(iso_subset, na.rm = T) > 1)
+iso_subset <- iso_subset[keep,]
+annot_subset <- annot_subset[keep,]
+
+iso_subset[is.na(iso_subset)] <- 0
+
+ht3 <-  ComplexHeatmap::Heatmap(data.matrix(iso_subset),
+                                name = "AF",
+                                row_title_rot = 0,
+                                row_split = annot_subset$genome_hr,
+                                cluster_rows = T,
+                                show_column_dend = T,
+                                show_row_dend = T,
+                                cluster_columns = T,
+                                show_column_names = F,
+                                col = col_fun2,
+                                border_gp = gpar(col = "darkblue", lty = 1),
+                                gap = unit(1, "mm"),
+                                column_names_gp = gpar(fontsize = 4),
+                                row_names_gp = gpar(fontsize = 4),
+                                na_col = "white",
+                                row_title_gp = gpar(fontsize = 4),
+                                column_title_gp = gpar(fontsize = 4),
+                                column_split =  factor(translateMouseIdToTreatmentGroup(translateIsolateIDtoMouse(colnames(iso_subset))),
+                levels = c("Control", "Ciprofloxacin", "Tetracyclin", "Vancomycin")))
+
+pdf("figure_5_panel_b.pdf", width = 3, height = 4)
+ht3
+dev.off()
+```
+
+# todo: add  annotation_name_gp = gpar(fontsize = 6)
+
+

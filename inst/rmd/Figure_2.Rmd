@@ -126,19 +126,19 @@ sig_ha_col_p_p_tetracyclin <- c("sig" = "white", "non-sig" = "white")
 sig_ha_col_p_vancomycin <- c("sig" = "white", "non-sig" = "white")
 
 pch_num <- 20
-sig_ha <- ComplexHeatmap::rowAnnotation(cipro = ComplexHeatmap::anno_simple(ifelse(annot$p_ciprofloxacin < 0.05, "sig", "non-sig"),
+sig_ha <- ComplexHeatmap::rowAnnotation(Ciprofloxacin = ComplexHeatmap::anno_simple(ifelse(annot$p_ciprofloxacin < 0.05, "sig", "non-sig"),
                                             pch = ifelse(annot$p_ciprofloxacin < 0.05, pch_num, NA),
                                             border = TRUE,
                                             pt_size = unit(1, "mm"),
                                             col = sig_ha_col_p_ciprofloxacin,
                                             simple_anno_size = unit(.2, "cm")),
-                        tet = anno_simple(ifelse(annot$p_tetracyclin < 0.05, "sig", "non-sig"),
+                        Tetracyclin = anno_simple(ifelse(annot$p_tetracyclin < 0.05, "sig", "non-sig"),
                                           pch = ifelse(annot$p_tetracyclin < 0.05, pch_num, NA),
                                           border = TRUE,
                                           pt_size = unit(1, "mm"),
                                           col = sig_ha_col_p_p_tetracyclin,
                                           simple_anno_size = unit(.2, "cm")),
-                        vanco = anno_simple(ifelse(annot$p_vancomycin < 0.05, "sig", "non-sig"),
+                        Vancomycin = anno_simple(ifelse(annot$p_vancomycin < 0.05, "sig", "non-sig"),
                                             pch = ifelse(annot$p_vancomycin < 0.05, pch_num, NA),
                                             border = TRUE,
                                             pt_size = unit(1, "mm"),
@@ -157,12 +157,11 @@ in_iso <- ifelse(snp_ids %in% oligomm_ab_isolates$snp_ids == TRUE,
 sig_ha_col_in_iso <- c("in_isolates" = "white", "not_in_isolates" = "white")
 ```
 
+Get phage locations to color row names
 
 ```{r}
-# Again filter for SNPs that are > 0.5 in at leat one sample shown
-#  keep <- do.call(function(...) pmax(..., na.rm = TRUE), limited_mat) > 0.25
-#  limited_mat <- limited_mat[keep,]
-#  annot <- annot[keep,]
+df <- data.frame(chr = annot$chr, pos = annot$POS, phage = FALSE)
+#phage_1_start <-
 ```
 
 ```{r}
@@ -170,7 +169,7 @@ ht <- ComplexHeatmap::Heatmap(data.matrix(limited_mat),
                               name = "AF",
                               left_annotation = sig_ha,
                               na_col = "grey80",
-                              cluster_rows = F,
+                              cluster_rows = T,
                               row_gap = unit(0, "mm"),
                               row_split = annot$chr,
                               row_title_rot = 0,
@@ -185,9 +184,11 @@ ht <- ComplexHeatmap::Heatmap(data.matrix(limited_mat),
                               cluster_columns = F,
                               border_gp = gpar(col = "black", lty = 1),
                               show_row_dend = F,
+                              show_column_names = F,
                               column_title_gp = gpar(fontsize = 6),
                               column_names_gp = gpar(fontsize = 3),
                               show_row_names = T,
-                              row_names_gp = gpar(fontsize = 3))
+                              row_names_gp = gpar(fontsize = 3,
+                                                    col = c(rep("black", 33), rep("black", 34))))
 ht
 ```

@@ -13,18 +13,87 @@ library(dplyr)
 library(tidyr)
 library(ComplexHeatmap)
 data(oligomm_ab_wgs_imputed_wide)
-data(oligomm_ab_isolates)
+data("oligomm_ab_isolates_corrected")
 data(oligomm_ab_mic)
 ```
 
 ```{r}
-df <- data.frame(
-    snp_id = oligomm_ab_isolates$snp_id,
-    AF = oligomm_ab_isolates$AF,
-    feature = oligomm_ab_isolates$feature,
-    genome_hr = oligomm_ab_isolates$genome_hr,
-    sample_id = paste0(oligomm_ab_isolates$sample))
+col_fun <- circlize::colorRamp2(c(0, 0.5, 1), c("white", "orange", "red"))
+col_fun2 <- circlize::colorRamp2(c(0, 0.5, 1), c("white", "grey50", "black"))
+col_fun_mic <- circlize::colorRamp2(c(0, 16, 256), c("white", "orange", "darkred"))
+col_fun_mic2 <- circlize::colorRamp2(c(0, 25, 50), c("white", "orange", "darkred"))
 ```
+
+```{r}
+df <- data.frame(
+    snp_id = oligomm_ab_isolates_corrected$snp_id,
+    AF = oligomm_ab_isolates_corrected$AF,
+    feature = oligomm_ab_isolates_corrected$feature,
+    genome_hr = oligomm_ab_isolates_corrected$genome_hr,
+    sample_id = paste0(oligomm_ab_isolates_corrected$sample))
+
+df$mouse <- translateIsolateIDtoMouse(df$sample_id)
+df$treatment <- translateMouseIdToTreatmentGroup(df$mouse)
+```
+
+# C. inocc
+
+```{r}
+df_bug <- df[which(df$genome_hr == "C. innocuum"),]
+
+df_wide <- spread(df_bug, key = sample_id, value = AF)
+
+df_wide[is.na(df_wide)] <- 0
+```
+
+# Focus on 30S and tRNA
+
+```{r}
+df_wide_subset <- df_wide[grep("30S", df_wide$feature),]
+dim(df_wide_subset)
+```
+
+Heatmap
+
+```{r}
+df_wide_subset_annot <- df_wide_subset[,1:6]
+df_wide_subset_data <- df_wide_subset[,7:ncol(df_wide_subset)]
+
+rownames(df_wide_subset_data) <- df_wide_subset_annot$feature
+  
+# annotation of MIC concentrations
+
+annot_mic_Vancomycin <- as.numeric(oligomm_ab_mic[match(colnames(df_wide_subset_data), 
+                              oligomm_ab_mic$sample),]$Vancomycin)
+
+col_fun_mic <- circlize::colorRamp2(c(0, 3, 6), c("white", "lightblue", "darkblue"))
+
+column_ha <- ComplexHeatmap::HeatmapAnnotation(MIC_Vancomycin = anno_barplot(annot_mic_Vancomycin,
+                                                 col = col_fun_mic,
+                                                 height = unit(1, "cm"),
+                                                 border = TRUE))
+                                                
+ht1 <- Heatmap(data.matrix(df_wide_subset_data),
+               gap = unit(0, "mm"),
+               row_title_rot = 90,
+               top_annotation = column_ha,
+                       column_gap = unit(1, "mm"),
+  row_title_gp = gpar(fontsize = 4),
+        column_title_gp = gpar(col = "black", fontsize = 6, fontface = "bold"),
+        col = col_fun,
+         column_split = factor(translateMouseIdToTreatmentGroup(translateIsolateIDtoMouse(colnames(df_wide_subset_data))),
+                levels = c("Control", "Ciprofloxacin", "Tetracyclin", "Vancomycin")),
+        cluster_columns = F,
+          row_gap = unit(0, "mm"),
+               border_gp = gpar(col = "black", lty = 1),
+          show_row_names = T,
+           row_names_side = "left",
+               column_names_gp = gpar(fontsize = 4),
+               row_names_gp = gpar(fontsize = 4))
+
+data(oligomm_ab_mic)
+```
+
 
 ```{r}
 df_wide <- spread(df, key = sample_id, value = AF)
@@ -33,12 +102,7 @@ df$num <- 1
 df_agg <- aggregate(data = df, num ~ genome_hr + sample_id, FUN = sum)
 ```
 
-
 ```{r}
-col_fun <- circlize::colorRamp2(c(0, 0.5, 1), c("white", "orange", "red"))
-col_fun2 <- circlize::colorRamp2(c(0, 0.5, 1), c("white", "grey50", "black"))
-col_fun_mic <- circlize::colorRamp2(c(0, 16, 256), c("white", "orange", "darkred"))
-col_fun_mic2 <- circlize::colorRamp2(c(0, 25, 50), c("white", "orange", "darkred"))
 
 unique(oligomm_ab_isolates$genome_hr)
 ```
@@ -207,7 +271,7 @@ ht2 <-  ComplexHeatmap::Heatmap(data.matrix(iso_subset), name = "isolates",
              
 )
             
-pdf("figure5.pdf", width = 12, height = 2)
+pdf("figure5_corrected.pdf", width = 12, height = 2)
 ht1 + ht2
 dev.off()
 ```

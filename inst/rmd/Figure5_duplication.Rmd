@@ -1,0 +1,86 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+library(OligoMMR)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(ComplexHeatmap)
+data(oligomm_ab_isolates)
+```
+
+```{r}
+oligomm_ab_isolates <- oligomm_ab_isolates[which(oligomm_ab_isolates$genome_hr == "C. innocuum"),]
+
+p <- ggplot(oligomm_ab_isolates, aes(x = AF)) + geom_histogram() 
+p <- p + facet_wrap(~genome_hr, scales = "free_y")
+p <- p + theme_pmuench(base_size = 9)
+p
+```
+
+```{r}
+data(oligomm_ab_isolates)
+
+dat <- oligomm_ab_isolates
+dat_one <- dat[which(dat$chr == "Clostridium_innocuum_I46"),]
+dat_one_lowaf <- dat_one[which(dat_one$AF < 0.9 & dat_one$AF > 0.1),]
+dat_one_highaf <- dat_one[which(dat_one$AF >= 0.9),]
+dat_one_lowaf_agg <- aggregate(DP ~ sample, data = dat_one_lowaf, FUN = mean)
+dat_one_highwaf_agg <- aggregate(DP ~ sample, data = dat_one_highaf, FUN = mean)
+dat_one_lowaf_agg$high <- dat_one_highwaf_agg$DP
+dat_one_lowaf_agg$factor <- round(dat_one_lowaf_agg$DP / dat_one_lowaf_agg$high, digits = 1)
+dat_one_lowaf_agg$genome <- "C. innocuum"
+
+dat_2 <- oligomm_ab_isolates
+dat_2_one <- dat_2[which(dat_2$chr == "Enterococcus_faecalis_KB1"),]
+dat_2_one_lowaf <- dat_2_one[which(dat_2_one$AF < 0.9 & dat_2_one$AF > 0.1),]
+dat_2_one_highaf <- dat_2_one[which(dat_2_one$AF >= 0.9),]
+dat_2_one_lowaf_agg <- aggregate(DP ~ sample, data = dat_2_one_lowaf, FUN = mean)
+dat_2_one_highwaf_agg <- aggregate(DP ~ sample, data = dat_2_one_highaf, FUN = mean)
+dat_2_one_lowaf_agg <- merge(dat_2_one_lowaf_agg, dat_2_one_highwaf_agg, by = "sample")
+colnames(dat_2_one_lowaf_agg) <- c("sample", "DP", "high")
+dat_2_one_lowaf_agg$factor <- round(dat_2_one_lowaf_agg$DP / dat_2_one_lowaf_agg$high, digits = 1)
+dat_2_one_lowaf_agg$genome <- "E. faecalis"
+
+all_genomes <- rbind(dat_one_lowaf_agg, dat_2_one_lowaf_agg, )
+
+p <- ggplot(all_genomes, aes(x = high, y = DP, color = genome, label = factor)) 
+p <- p + geom_point()
+p <- p + geom_smooth(method = "lm", se = F)
+#p <- p + geom_segment(aes(xend=high), yend=0, alpha = .05, linetype = 2)
+#p <- p + geom_segment(aes(yend=DP), xend=0, alpha = .05, linetype = 2)
+p <- p + theme(aspect.ratio = 1) + xlim(c(200, 450)) + ylim(c(200, 800))
+p <- p + geom_abline(intercept = 0, color = "green", linetype = 2) 
+#p <- p + geom_text() 
+p <- p + theme_pmuench(base_size = 9)
+p <- p + geom_abline(intercept = 0, slope = 2, color = "red", linetype = 2) 
+p <- p + xlab("mean depth on high AF (>=90%) SNP") + ylab("mean depth on intermediate AF (<90% & >10%) SNPs")
+p <- p + scale_color_manual(values = c("E. faecalis" = "lightblue",
+                                       "C. innocuum" = "darkblue"))
+p
+
+```
+
+Version for ms
+
+```{r}
+p <- ggplot(dat_one_lowaf_agg, aes(x = high, y = DP, label = factor)) + geom_point()
+p <- p + geom_smooth(method = "lm", se = F)
+#p <- p + geom_segment(aes(xend = high), yend = 0, alpha = .05)
+#p <- p + geom_segment(aes(yend = DP), xend = 0, alpha = .05)
+p <- p + theme_pmuench(base_size = 6)
+p <- p + geom_abline(intercept = 0, color = "green") + theme_pmuench(base_size = 9)
+p <- p + geom_abline(intercept = 0, slope = 2, color = "red") 
+p <- p + xlab("mean depth on high AF (>=90%) SNP") + ylab("mean depth on intermediate AF (<90%) SNPs") + ggtitle("C. innocuum")
+
+p
+#  + geom_text()
+#p <- p +  theme(aspect.ratio=1) + xlim(c(200, 450)) + ylim(c(200, 800))
+
+p <- p + geom_abline(intercept = 0, color = "green") + geom_text() + theme_pmuench(base_size = 9)
+p <- p + geom_abline(intercept = 0, slope = 2, color = "red") 
+```
+

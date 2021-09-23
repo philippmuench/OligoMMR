@@ -324,7 +324,7 @@ translateIsolateIDtoBug <- function(dat) {
     replace(. == "DR3", "i46")  %>%
     replace(. == "DR6", "i46")  %>%
     replace(. == "DR10", "i46")  %>%
-    replace(. == "DR12", "i46")  %>%
+    replace(. == "DR12", "kb1")  %>%
     replace(. == "DR7", "yl58")  %>%
     replace(. == "DR4", "kb1")  %>%
     replace(. == "DR13", "yl58") %>%

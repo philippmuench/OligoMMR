@@ -9,7 +9,7 @@ library(dplyr)
 library(tidyr)
 library(ggplot2)
 library(ComplexHeatmap)
-data(oligomm_ab_isolates)
+data("oligomm_ab_isolates_corrected")
 ```
 
 ```{r}
@@ -45,7 +45,7 @@ colnames(dat_2_one_lowaf_agg) <- c("sample", "DP", "high")
 dat_2_one_lowaf_agg$factor <- round(dat_2_one_lowaf_agg$DP / dat_2_one_lowaf_agg$high, digits = 1)
 dat_2_one_lowaf_agg$genome <- "E. faecalis"
 
-all_genomes <- rbind(dat_one_lowaf_agg, dat_2_one_lowaf_agg, )
+all_genomes <- rbind(dat_one_lowaf_agg, dat_2_one_lowaf_agg)
 
 p <- ggplot(all_genomes, aes(x = high, y = DP, color = genome, label = factor)) 
 p <- p + geom_point()
@@ -61,26 +61,41 @@ p <- p + xlab("mean depth on high AF (>=90%) SNP") + ylab("mean depth on interme
 p <- p + scale_color_manual(values = c("E. faecalis" = "lightblue",
                                        "C. innocuum" = "darkblue"))
 p
-
 ```
 
-Version for ms
+Show correlation of problematic regions in isolate and metagenome
 
 ```{r}
-p <- ggplot(dat_one_lowaf_agg, aes(x = high, y = DP, label = factor)) + geom_point()
-p <- p + geom_smooth(method = "lm", se = F)
-#p <- p + geom_segment(aes(xend = high), yend = 0, alpha = .05)
-#p <- p + geom_segment(aes(yend = DP), xend = 0, alpha = .05)
-p <- p + theme_pmuench(base_size = 6)
-p <- p + geom_abline(intercept = 0, color = "green") + theme_pmuench(base_size = 9)
-p <- p + geom_abline(intercept = 0, slope = 2, color = "red") 
-p <- p + xlab("mean depth on high AF (>=90%) SNP") + ylab("mean depth on intermediate AF (<90%) SNPs") + ggtitle("C. innocuum")
+data("oligomm_ab_isolates_corrected")
+data("oligomm_ab_wgs")
+
+# subset datasets for these two bugs where we have isolates
+bugs <- c("C. innocuum", "E. faecalis")
+oligomm_ab_wgs <- oligomm_ab_wgs[which(oligomm_ab_wgs$genome_hr %in% bugs),]
+oligomm_ab_isolates_corrected <- oligomm_ab_isolates_corrected[which(oligomm_ab_isolates_corrected$genome_hr %in% bugs),]
+
+# subet for control and last day 1683
+
+#oligomm_ab_wgs <- oligomm_ab_wgs[which(oligomm_ab_wgs$mouse.id == "1683"),]
+ 
+df_wgs <- data.frame(genome = oligomm_ab_wgs$genome_hr,
+                     id = paste0(oligomm_ab_wgs$genome_hr, "-", oligomm_ab_wgs$POS,
+                                 "-", oligomm_ab_wgs$REF, "-", oligomm_ab_wgs$ALT),
+                     af = oligomm_ab_wgs$AF)
+
+df_isolate <- data.frame(genome = oligomm_ab_isolates_corrected$genome_hr,
+                         id = paste0(oligomm_ab_isolates_corrected$genome_hr, "-", oligomm_ab_isolates_corrected$POS,
+                                 "-", oligomm_ab_isolates_corrected$REF, "-", oligomm_ab_isolates_corrected$ALT),
+                     af = oligomm_ab_isolates_corrected$AF)
+
+wgs_iso <- merge(df_wgs, df_isolate, by = "id")
+
+p <- ggplot(wgs_iso, aes(x = af.x, y = af.y, color = genome.x))
+p <- p + geom_point(size = .5)  + theme_pmuench()
+p <- p + scale_color_manual(values = c("E. faecalis" = "lightblue",
+                                       "C. innocuum" = "darkblue"))
+p <- p + theme(aspect.ratio = 1)
+p <- p + xlab("AF in whole genome shotgun") + ylab("AF in isolates")
 
 p
-#  + geom_text()
-#p <- p +  theme(aspect.ratio=1) + xlim(c(200, 450)) + ylim(c(200, 800))
-
-p <- p + geom_abline(intercept = 0, color = "green") + geom_text() + theme_pmuench(base_size = 9)
-p <- p + geom_abline(intercept = 0, slope = 2, color = "red") 
 ```
-

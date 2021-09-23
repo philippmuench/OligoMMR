@@ -1,5 +1,5 @@
 ---
-title: "Figure 2"
+title: "unique version of Figure 2"
 output: html_document
 ---
 
@@ -10,14 +10,12 @@ devtools::install_github("philippmuench/OligoMMR")
 ```{r}
 library(OligoMMR)
 data(oligomm_ab_wgs_imputed_wide) # contains AF profile for heatmap
-data(oligomm_ab_isolates) # for annotation purpose
+data(oligomm_ab_isolates) # for ation purpose
 ```
 
+we disable here the filtering since we are filtering for uniqueness and not based on p-value of effect size
+
 ```{r}
-effect_size_threshold <- 0.1
-p_threshold <- 0.001
-af_threshold <- 0
-count_threshold <- 8
 mouse_ids <- c("1683", "1688", "1692", "1699")
 col_fun <- circlize::colorRamp2(c(0, 0.5, 1), c("white", "orange", "red"))
 ```
@@ -26,20 +24,22 @@ We filter now the AF matrix, first by the p values associated to each SNP, then 
 
 ```{r}
 df_wide_bug <- as.data.frame(oligomm_ab_wgs_imputed_wide)
-df_wide_bug <- df_wide_bug[which(df_wide_bug$p_ciprofloxacin <= p_threshold |
-                                   df_wide_bug$p_tetracyclin <= p_threshold |
-                                   df_wide_bug$p_vancomycin <= p_threshold ),]
 dim(df_wide_bug)
-df_wide_bug <- df_wide_bug[which(df_wide_bug$effect_size_ciprofloxacin >= effect_size_threshold |
-                                   df_wide_bug$effect_size_ciprofloxacin >= effect_size_threshold |
-                                   df_wide_bug$effect_size_ciprofloxacin >= effect_size_threshold ),]
-dim(df_wide_bug)
-df_wide_bug <- df_wide_bug[which(df_wide_bug$observations_vancomycin >= count_threshold &
-                                   df_wide_bug$observations_tetracyclin >= count_threshold &
-                                   df_wide_bug$observations_control >= count_threshold &
-                                   df_wide_bug$observations_ciprofloxacin >= count_threshold ),]
-dim(df_wide_bug)
+
+control_mouse <- c("1681", "1682", "1683", "1684", "1685")
+# subset for control samples
+
+control_subset <- df_wide_bug[, substr(colnames(df_wide_bug), 1, 4) %in% control_mouse]
+rowmeans <- rowMeans(control_subset, na.rm = T)
+library(matrixStats)
+threshold_af <- 0.2
+threshold_sd <- 1
+
+rowsds <- rowSds(as.matrix(control_subset), na.rm = T)
+zero_in_control <- which(rowmeans <= threshold_af & rowsds <= threshold_sd) # 259 SNPs when threshold is zero
+df_wide_bug <- df_wide_bug[zero_in_control,]
 ```
+
 We transform the dataframe in a format that can be used for a heatmap
 ```{r}
 require(matrixStats)
@@ -47,15 +47,16 @@ require(matrixStats)
 df_wide_bug <- df_wide_bug[order(df_wide_bug$chr, df_wide_bug$POS), ]
 # get SNP statistics we can use for filtering later
 # split in annot and data
-df_wide_bug_mat <- df_wide_bug[,  grep("16", colnames(df_wide_bug))]
-annot <- df_wide_bug[, grep("16", colnames(df_wide_bug), invert = T)]
+df_wide_bug_mat <- df_wide_bug[,  grep("^16", colnames(df_wide_bug))]
+annot <- df_wide_bug[, grep("^16", colnames(df_wide_bug), invert = T)]
 # subset for relevant mouse ids
 limited_mat <- df_wide_bug_mat[, which(substr(colnames(df_wide_bug_mat), 1, 4) %in% mouse_ids)]
 rownames(limited_mat) <- paste0(annot$feature, "-",  annot$POS)
+
 # Again filter for SNPs that are present in these mice
-keep <- which(rowSums(limited_mat > 0, na.rm = T) > 0)
-limited_mat <- limited_mat[keep,]
-annot <- annot[keep,]
+#keep <- which(rowSums(limited_mat > 0, na.rm = T) > 0)
+#limited_mat <- limited_mat[keep,]
+#annot <- annot[keep,]
 ```
 
 We reorder the data frames (columns)
@@ -93,22 +94,6 @@ column_ha <- ComplexHeatmap::HeatmapAnnotation(day = anno_simple(day_annot_2,
                                                  border = TRUE),
                                annotation_name_gp = gpar(fontsize = 6))
 
-# row_ha <- list(type = c("coding" = "black", "non-coding" = "gey10", "hypothetical" = "gey50"))
-row_ha_col <- c("coding" = "black", "non-coding" = "white", "hypothetical" = "grey50")
-
-annot_function_simple <- as.character(as.matrix(annot$feature))
-annot_function_simple[which(annot_function_simple != "hypothetical protein" &
-                              annot_function_simple != "outside ORFs")] <- "coding"
-annot_function_simple <- annot_function_simple %>%
-  replace(. == "hypothetical protein", "hypothetical") %>%
-  replace(. == "outside ORFs", "non-coding") %>%
-  replace(. == "coding", "coding") # rename
-
-row_ha <- ComplexHeatmap::rowAnnotation(type = anno_simple(annot_function_simple,
-                                           border = TRUE,
-                                           simple_anno_size = unit(.2, "cm"),
-                                           col = row_ha_col
-))
 
 row_titles_occ <- as.data.frame(table(annot$feature))
 row_titles_occ <- row_titles_occ[order(-row_titles_occ$Freq), ]
@@ -155,14 +140,9 @@ oligomm_ab_isolates$snp_ids <- paste0(oligomm_ab_isolates$chr,"-" ,
 in_iso <- ifelse(snp_ids %in% oligomm_ab_isolates$snp_ids == TRUE,
                  "in_isolates", "not_in_isolates")
 sig_ha_col_in_iso <- c("in_isolates" = "white", "not_in_isolates" = "white")
-```
-
-Get phage locations to color row names
-
-```{r}
 df <- data.frame(chr = annot$chr, pos = annot$POS, phage = FALSE)
-#phage_1_start <-
 ```
+
 
 ```{r}
 ht <- ComplexHeatmap::Heatmap(data.matrix(limited_mat),
@@ -188,8 +168,98 @@ ht <- ComplexHeatmap::Heatmap(data.matrix(limited_mat),
                               column_title_gp = gpar(fontsize = 6),
                               column_names_gp = gpar(fontsize = 3),
                               show_row_names = T,
-                              row_names_gp = gpar(fontsize = 3,
-                                                    col = c(rep("black", 33), rep("black", 34))))
+                              row_names_gp = gpar(fontsize = 3))
 ht
 ```
+
+
+```{r}
+pdf(file = "Figure_SX1_2.pdf", width = 10, height = 15)
+print(ht)
+dev.off()
+```
+
+# check if we have the 30S in C. incoccuum
+
+```{r}
+library(OligoMMR)
+data(oligomm_ab_wgs_imputed_wide) # contains AF profile for heatmap
+
+oligomm_ab_wgs_imputed_wide_30s <- oligomm_ab_wgs_imputed_wide[which(oligomm_ab_wgs_imputed_wide$POS == 1519047),]
+
+# split in annot and data
+df_af <- oligomm_ab_wgs_imputed_wide_30s[,  grep("^16", colnames(oligomm_ab_wgs_imputed_wide_30s))]
+
+df_af_melt <- reshape2::melt(df_af)
+df_af_melt$mouse <- substr(df_af_melt$variable, 1, 4)
+df_af_melt$day <- substr(df_af_melt$variable, 6, 7)
+df_af_melt$group <- translateMouseIdToTreatmentGroup(df_af_melt$mouse)
+
+library(ggplot2)
+p <- ggplot(data = df_af_melt, aes(x = day, y = value, color = group, group = mouse))
+p <- p + geom_point()
+p <- p + facet_wrap(~ mouse)
+p <- p + theme_pmuench()
+p
+```
+
+try with a heatmap
+
+```{r}
+library(OligoMMR)
+data("oligomm_ab_wgs_imputed_long")
+oligomm_ab_wgs_imputed_long <- oligomm_ab_wgs_imputed_long[which(oligomm_ab_wgs_imputed_long$POS == 1519047),]
+'%!in%' <- function(x,y)!('%in%'(x,y))
+remove <- c("rows_median", "rows_max", "rows_IQR", "rows_sd", "low_sd")
+oligomm_ab_wgs_imputed_long <- oligomm_ab_wgs_imputed_long[ which(oligomm_ab_wgs_imputed_long$variable %!in% remove),]
+
+library(tidyr)
+df <- data.frame(day = oligomm_ab_wgs_imputed_long$day, 
+                 mouse = oligomm_ab_wgs_imputed_long$mouse_id,
+                 af = oligomm_ab_wgs_imputed_long$value)
+
+test <- spread(df, key = day , value = af)
+rownames(test) <- test$mouse
+test$mouse <- NULL
+library(ComplexHeatmap)
+
+# annotation of day (columns)
+day_annot_1 <- ifelse(binDaysByPhase(as.integer(colnames(test))) == "post-treatment", "*", "")
+day_annot_2 <- as.integer(colnames(test))
+
+# Annotation columns - should be in the order matched limited_mat
+col_fun_ha <- circlize::colorRamp2(c(0, max(day_annot_2)), c("white", "grey50"))
+column_ha <- ComplexHeatmap::HeatmapAnnotation(day = anno_simple(day_annot_2,
+                                                 col = col_fun_ha,
+                                                 pch = day_annot_1,
+                                                 height = unit(.4, "cm"),
+                                                 border = TRUE),
+                               annotation_name_gp = gpar(fontsize = 6))
+
+ht <- Heatmap(data.matrix(test),
+        cluster_rows = F,
+        
+        name = "AF",
+        border_gp = gpar(col = "black", lty = 1),
+        row_split = factor(translateMouseIdToTreatmentGroup(rownames(test)),
+                           levels = c("Control", "Ciprofloxacin", "Tetracyclin", "Vancomycin")),
+        column_gap = unit(1, "mm"),
+        row_title_rot = 0,
+        top_annotation = column_ha,
+        gap = unit(0, "mm"),
+        row_gap = unit(0, "mm"),
+        column_title = "30S ribosomal protein S10 (1519047)",
+        row_names_gp = gpar(fontsize = 6),
+        column_title_gp = gpar(fontsize = 6),
+        row_title_gp = gpar(fontsize = 6),
+        column_names_gp = gpar(fontsize = 6),
+        na_col = "grey80",
+        col = circlize::colorRamp2(c(0, 0.5, 1), c("white", "orange", "red")),
+        cluster_columns = F)
+
+pdf("Figure_SX2.pdf", width = 2.8, height = 1.4)
+print(ht)
+dev.off()
+```
+
 

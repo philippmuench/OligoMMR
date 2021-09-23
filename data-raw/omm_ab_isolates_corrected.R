@@ -1,2 +1,2 @@
-oligomm_ab_isolates <- readRDS("data-raw/omm_ab_isolates.rds")
-usethis::use_data(oligomm_ab_isolates, overwrite = FALSE)
+oligomm_ab_isolates_corrected <- readRDS("data-raw/omm_ab_isolates_corrected.rds")
+usethis::use_data(oligomm_ab_isolates_corrected, overwrite = FALSE)

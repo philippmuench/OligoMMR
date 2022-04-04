@@ -410,3 +410,384 @@ translateIsolateIDtoBug <- function(dat) {
     replace(. == "SW140", "i46")
   return(dat)
 }
+
+
+# day to phase
+sampleIDtoWGS <- function(dat){
+  require(dplyr)
+  dat <- dat %>%
+    replace(. == "1683_0", TRUE) %>%
+    replace(. == "1683_4", TRUE) %>%
+    replace(. == "1683_9", TRUE) %>%
+    replace(. == "1683_14", TRUE) %>%
+    replace(. == "1683_18", TRUE) %>%
+    replace(. == "1683_23", TRUE) %>%
+    replace(. == "1683_30", TRUE) %>%
+    replace(. == "1683_37", TRUE) %>%
+    replace(. == "1683_44", TRUE) %>%
+    replace(. == "1683_49", TRUE) %>%
+    replace(. == "1683_53", TRUE) %>%
+    replace(. == "1683_58", TRUE) %>%
+    replace(. == "1683_63", TRUE) %>%
+    replace(. == "1683_67", TRUE) %>%
+    replace(. == "1683_72", TRUE) %>%
+    replace(. == "1683_79", TRUE) %>%
+
+    replace(. == "1688_0", TRUE) %>%
+    replace(. == "1688_4", TRUE) %>%
+    replace(. == "1688_9", TRUE) %>%
+    replace(. == "1688_14", TRUE) %>%
+    replace(. == "1688_18", TRUE) %>%
+    replace(. == "1688_23", TRUE) %>%
+    replace(. == "1688_30", TRUE) %>%
+    replace(. == "1688_37", TRUE) %>%
+    replace(. == "1688_44", TRUE) %>%
+    replace(. == "1688_49", TRUE) %>%
+    replace(. == "1688_53", TRUE) %>%
+    replace(. == "1688_58", TRUE) %>%
+    replace(. == "1688_63", TRUE) %>%
+    replace(. == "1688_67", TRUE) %>%
+    replace(. == "1688_72", TRUE) %>%
+    replace(. == "1688_79", TRUE) %>%
+
+    replace(. == "1692_0", TRUE) %>%
+    replace(. == "1692_4", TRUE) %>%
+    replace(. == "1692_9", TRUE) %>%
+    replace(. == "1692_14", TRUE) %>%
+    replace(. == "1692_18", TRUE) %>%
+    replace(. == "1692_23", TRUE) %>%
+    replace(. == "1692_30", TRUE) %>%
+    replace(. == "1692_37", TRUE) %>%
+    replace(. == "1692_44", TRUE) %>%
+    replace(. == "1692_49", TRUE) %>%
+    replace(. == "1692_53", TRUE) %>%
+    replace(. == "1692_58", TRUE) %>%
+    replace(. == "1692_63", TRUE) %>%
+    replace(. == "1692_67", TRUE) %>%
+    replace(. == "1692_72", TRUE) %>%
+    replace(. == "1692_79", TRUE) %>%
+
+    replace(. == "1699_0", TRUE) %>%
+    replace(. == "1699_4", TRUE) %>%
+    replace(. == "1699_9", TRUE) %>%
+    replace(. == "1699_14", TRUE) %>%
+    replace(. == "1699_18", TRUE) %>%
+    replace(. == "1699_23", TRUE) %>%
+    replace(. == "1699_30", TRUE) %>%
+    replace(. == "1699_37", TRUE) %>%
+    replace(. == "1699_44", TRUE) %>%
+    replace(. == "1699_49", TRUE) %>%
+    replace(. == "1699_53", TRUE) %>%
+    replace(. == "1699_58", TRUE) %>%
+    replace(. == "1699_63", TRUE) %>%
+    replace(. == "1699_67", TRUE) %>%
+    replace(. == "1699_72", TRUE) %>%
+    replace(. == "1699_79", TRUE) %>%
+
+    replace(. == "1686_0", TRUE) %>%
+    replace(. == "1686_14", TRUE) %>%
+    replace(. == "1686_30", TRUE) %>%
+    replace(. == "1686_49", TRUE) %>%
+    replace(. == "1686_63", TRUE) %>%
+    replace(. == "1686_79", TRUE) %>%
+
+    replace(. == "1690_0", TRUE) %>%
+    replace(. == "1690_14", TRUE) %>%
+    replace(. == "1690_30", TRUE) %>%
+    replace(. == "1690_49", TRUE) %>%
+    replace(. == "1690_63", TRUE) %>%
+    replace(. == "1690_79", TRUE) %>%
+
+    replace(. == "1693_0", TRUE) %>%
+    replace(. == "1693_14", TRUE) %>%
+    replace(. == "1693_30", TRUE) %>%
+    replace(. == "1693_49", TRUE) %>%
+    replace(. == "1693_63", TRUE) %>%
+    replace(. == "1693_79", TRUE) %>%
+
+    replace(. == "1694_0", TRUE) %>%
+    replace(. == "1694_14", TRUE) %>%
+    replace(. == "1694_30", TRUE) %>%
+    replace(. == "1694_49", TRUE) %>%
+    replace(. == "1694_63", TRUE) %>%
+    replace(. == "1694_79", TRUE) %>%
+
+    replace(. == "1697_0", TRUE) %>%
+    replace(. == "1697_14", TRUE) %>%
+    replace(. == "1697_30", TRUE) %>%
+    replace(. == "1697_49", TRUE) %>%
+    replace(. == "1697_63", TRUE) %>%
+    replace(. == "1697_79", TRUE) %>%
+
+    replace(. == "1698_0", TRUE) %>%
+    replace(. == "1698_14", TRUE) %>%
+    replace(. == "1698_30", TRUE) %>%
+    replace(. == "1698_49", TRUE) %>%
+    replace(. == "1698_63", TRUE) %>%
+    replace(. == "1698_79", TRUE) %>%
+
+    replace(. == "1681_0", TRUE) %>%
+    replace(. == "1681_14", TRUE) %>%
+    replace(. == "1681_30", TRUE) %>%
+    replace(. == "1681_49", TRUE) %>%
+    replace(. == "1681_63", TRUE) %>%
+    replace(. == "1681_79", TRUE) %>%
+
+    replace(. == "1684_0", TRUE) %>%
+    replace(. == "1684_14", TRUE) %>%
+    replace(. == "1684_30", TRUE) %>%
+    replace(. == "1684_49", TRUE) %>%
+    replace(. == "1684_63", TRUE) %>%
+    replace(. == "1684_79", TRUE) %>%
+
+    replace(. == "1684_4", FALSE) %>%
+    replace(. == "1684_9", FALSE) %>%
+    replace(. == "1684_18", FALSE) %>%
+    replace(. == "1684_23", FALSE) %>%
+    replace(. == "1684_37", FALSE) %>%
+    replace(. == "1684_44", FALSE) %>%
+    replace(. == "1684_53", FALSE) %>%
+    replace(. == "1684_58", FALSE) %>%
+    replace(. == "1684_67", FALSE) %>%
+    replace(. == "1684_72", FALSE) %>%
+
+    replace(. == "1681_4", FALSE) %>%
+    replace(. == "1681_9", FALSE) %>%
+    replace(. == "1681_18", FALSE) %>%
+    replace(. == "1681_23", FALSE) %>%
+    replace(. == "1681_37", FALSE) %>%
+    replace(. == "1681_44", FALSE) %>%
+    replace(. == "1681_53", FALSE) %>%
+    replace(. == "1681_58", FALSE) %>%
+    replace(. == "1681_67", FALSE) %>%
+    replace(. == "1681_72", FALSE) %>%
+
+    replace(. == "1697_4", FALSE) %>%
+    replace(. == "1697_9", FALSE) %>%
+    replace(. == "1697_18", FALSE) %>%
+    replace(. == "1697_23", FALSE) %>%
+    replace(. == "1697_37", FALSE) %>%
+    replace(. == "1697_44", FALSE) %>%
+    replace(. == "1697_53", FALSE) %>%
+    replace(. == "1697_58", FALSE) %>%
+    replace(. == "1697_67", FALSE) %>%
+    replace(. == "1697_72", FALSE) %>%
+
+    replace(. == "1698_4", FALSE) %>%
+    replace(. == "1698_9", FALSE) %>%
+    replace(. == "1698_18", FALSE) %>%
+    replace(. == "1698_23", FALSE) %>%
+    replace(. == "1698_37", FALSE) %>%
+    replace(. == "1698_44", FALSE) %>%
+    replace(. == "1698_53", FALSE) %>%
+    replace(. == "1698_58", FALSE) %>%
+    replace(. == "1698_67", FALSE) %>%
+    replace(. == "1698_72", FALSE) %>%
+
+    replace(. == "1694_4", FALSE) %>%
+    replace(. == "1694_9", FALSE) %>%
+    replace(. == "1694_18", FALSE) %>%
+    replace(. == "1694_23", FALSE) %>%
+    replace(. == "1694_37", FALSE) %>%
+    replace(. == "1694_44", FALSE) %>%
+    replace(. == "1694_53", FALSE) %>%
+    replace(. == "1694_58", FALSE) %>%
+    replace(. == "1694_67", FALSE) %>%
+    replace(. == "1694_72", FALSE) %>%
+
+    replace(. == "1693_4", FALSE) %>%
+    replace(. == "1693_9", FALSE) %>%
+    replace(. == "1693_18", FALSE) %>%
+    replace(. == "1693_23", FALSE) %>%
+    replace(. == "1693_37", FALSE) %>%
+    replace(. == "1693_44", FALSE) %>%
+    replace(. == "1693_53", FALSE) %>%
+    replace(. == "1693_58", FALSE) %>%
+    replace(. == "1693_67", FALSE) %>%
+    replace(. == "1693_72", FALSE) %>%
+
+    replace(. == "1690_4", FALSE) %>%
+    replace(. == "1690_9", FALSE) %>%
+    replace(. == "1690_18", FALSE) %>%
+    replace(. == "1690_23", FALSE) %>%
+    replace(. == "1690_37", FALSE) %>%
+    replace(. == "1690_44", FALSE) %>%
+    replace(. == "1690_53", FALSE) %>%
+    replace(. == "1690_58", FALSE) %>%
+    replace(. == "1690_67", FALSE) %>%
+    replace(. == "1690_72", FALSE) %>%
+
+    replace(. == "1686_4", FALSE) %>%
+    replace(. == "1686_9", FALSE) %>%
+    replace(. == "1686_18", FALSE) %>%
+    replace(. == "1686_23", FALSE) %>%
+    replace(. == "1686_37", FALSE) %>%
+    replace(. == "1686_44", FALSE) %>%
+    replace(. == "1686_53", FALSE) %>%
+    replace(. == "1686_58", FALSE) %>%
+    replace(. == "1686_67", FALSE) %>%
+    replace(. == "1686_72", FALSE) %>%
+
+    replace(. == "1682_0", FALSE) %>%
+    replace(. == "1682_4", FALSE) %>%
+    replace(. == "1682_9", FALSE) %>%
+    replace(. == "1682_14", FALSE) %>%
+    replace(. == "1682_18", FALSE) %>%
+    replace(. == "1682_23", FALSE) %>%
+    replace(. == "1682_30", FALSE) %>%
+    replace(. == "1682_37", FALSE) %>%
+    replace(. == "1682_44", FALSE) %>%
+    replace(. == "1682_49", FALSE) %>%
+    replace(. == "1682_53", FALSE) %>%
+    replace(. == "1682_58", FALSE) %>%
+    replace(. == "1682_63", FALSE) %>%
+    replace(. == "1682_67", FALSE) %>%
+    replace(. == "1682_72", FALSE) %>%
+    replace(. == "1682_79", FALSE) %>%
+
+    replace(. == "1685_0", FALSE) %>%
+    replace(. == "1685_4", FALSE) %>%
+    replace(. == "1685_9", FALSE) %>%
+    replace(. == "1685_14", FALSE) %>%
+    replace(. == "1685_18", FALSE) %>%
+    replace(. == "1685_23", FALSE) %>%
+    replace(. == "1685_30", FALSE) %>%
+    replace(. == "1685_37", FALSE) %>%
+    replace(. == "1685_44", FALSE) %>%
+    replace(. == "1685_49", FALSE) %>%
+    replace(. == "1685_53", FALSE) %>%
+    replace(. == "1685_58", FALSE) %>%
+    replace(. == "1685_63", FALSE) %>%
+    replace(. == "1685_67", FALSE) %>%
+    replace(. == "1685_72", FALSE) %>%
+    replace(. == "1685_79", FALSE) %>%
+
+    replace(. == "1687_0", FALSE) %>%
+    replace(. == "1687_4", FALSE) %>%
+    replace(. == "1687_9", FALSE) %>%
+    replace(. == "1687_14", FALSE) %>%
+    replace(. == "1687_18", FALSE) %>%
+    replace(. == "1687_23", FALSE) %>%
+    replace(. == "1687_30", FALSE) %>%
+    replace(. == "1687_37", FALSE) %>%
+    replace(. == "1687_44", FALSE) %>%
+    replace(. == "1687_49", FALSE) %>%
+    replace(. == "1687_53", FALSE) %>%
+    replace(. == "1687_58", FALSE) %>%
+    replace(. == "1687_63", FALSE) %>%
+    replace(. == "1687_67", FALSE) %>%
+    replace(. == "1687_72", FALSE) %>%
+    replace(. == "1687_79", FALSE) %>%
+
+    replace(. == "1689_0", FALSE) %>%
+    replace(. == "1689_4", FALSE) %>%
+    replace(. == "1689_9", FALSE) %>%
+    replace(. == "1689_14", FALSE) %>%
+    replace(. == "1689_18", FALSE) %>%
+    replace(. == "1689_23", FALSE) %>%
+    replace(. == "1689_30", FALSE) %>%
+    replace(. == "1689_37", FALSE) %>%
+    replace(. == "1689_44", FALSE) %>%
+    replace(. == "1689_49", FALSE) %>%
+    replace(. == "1689_53", FALSE) %>%
+    replace(. == "1689_58", FALSE) %>%
+    replace(. == "1689_63", FALSE) %>%
+    replace(. == "1689_67", FALSE) %>%
+    replace(. == "1689_72", FALSE) %>%
+    replace(. == "1689_79", FALSE) %>%
+
+    replace(. == "1691_0", FALSE) %>%
+    replace(. == "1691_4", FALSE) %>%
+    replace(. == "1691_9", FALSE) %>%
+    replace(. == "1691_14", FALSE) %>%
+    replace(. == "1691_18", FALSE) %>%
+    replace(. == "1691_23", FALSE) %>%
+    replace(. == "1691_30", FALSE) %>%
+    replace(. == "1691_37", FALSE) %>%
+    replace(. == "1691_44", FALSE) %>%
+    replace(. == "1691_49", FALSE) %>%
+    replace(. == "1691_53", FALSE) %>%
+    replace(. == "1691_58", FALSE) %>%
+    replace(. == "1691_63", FALSE) %>%
+    replace(. == "1691_67", FALSE) %>%
+    replace(. == "1691_72", FALSE) %>%
+    replace(. == "1691_79", FALSE) %>%
+
+    replace(. == "1695_0", FALSE) %>%
+    replace(. == "1695_4", FALSE) %>%
+    replace(. == "1695_9", FALSE) %>%
+    replace(. == "1695_14", FALSE) %>%
+    replace(. == "1695_18", FALSE) %>%
+    replace(. == "1695_23", FALSE) %>%
+    replace(. == "1695_30", FALSE) %>%
+    replace(. == "1695_37", FALSE) %>%
+    replace(. == "1695_44", FALSE) %>%
+    replace(. == "1695_49", FALSE) %>%
+    replace(. == "1695_53", FALSE) %>%
+    replace(. == "1695_58", FALSE) %>%
+    replace(. == "1695_63", FALSE) %>%
+    replace(. == "1695_67", FALSE) %>%
+    replace(. == "1695_72", FALSE) %>%
+    replace(. == "1695_79", FALSE) %>%
+
+    replace(. == "1696_0", FALSE) %>%
+    replace(. == "1696_4", FALSE) %>%
+    replace(. == "1696_9", FALSE) %>%
+    replace(. == "1696_14", FALSE) %>%
+    replace(. == "1696_18", FALSE) %>%
+    replace(. == "1696_23", FALSE) %>%
+    replace(. == "1696_30", FALSE) %>%
+    replace(. == "1696_37", FALSE) %>%
+    replace(. == "1696_44", FALSE) %>%
+    replace(. == "1696_49", FALSE) %>%
+    replace(. == "1696_53", FALSE) %>%
+    replace(. == "1696_58", FALSE) %>%
+    replace(. == "1696_63", FALSE) %>%
+    replace(. == "1696_67", FALSE) %>%
+    replace(. == "1696_72", FALSE) %>%
+    replace(. == "1696_79", FALSE) %>%
+
+
+    replace(. == "1700_0", FALSE) %>%
+    replace(. == "1700_4", FALSE) %>%
+    replace(. == "1700_9", FALSE) %>%
+    replace(. == "1700_14", FALSE) %>%
+    replace(. == "1700_18", FALSE) %>%
+    replace(. == "1700_23", FALSE) %>%
+    replace(. == "1700_30", FALSE) %>%
+    replace(. == "1700_37", FALSE) %>%
+    replace(. == "1700_44", FALSE) %>%
+    replace(. == "1700_49", FALSE) %>%
+    replace(. == "1700_53", FALSE) %>%
+    replace(. == "1700_58", FALSE) %>%
+    replace(. == "1700_63", FALSE) %>%
+    replace(. == "1700_67", FALSE) %>%
+    replace(. == "1700_72", FALSE) %>%
+    replace(. == "1700_79", FALSE)
+
+  return(dat)
+}
+
+
+# day to phase
+binDaysByShortPhase <- function(dat){
+  require(dplyr)
+  dat <- dat %>%
+    replace(. == 4, TRUE) %>%
+    replace(. == 9, FALSE) %>%
+    replace(. == 14, FALSE) %>%
+    replace(. == 18, TRUE) %>%
+    replace(. == 23, FALSE) %>%
+    replace(. == 30, FALSE) %>%
+    replace(. == 37, FALSE) %>%
+    replace(. == 44, FALSE) %>%
+    replace(. == 49, FALSE) %>%
+    replace(. == 53, TRUE) %>%
+    replace(. == 58, FALSE) %>%
+    replace(. == 63, FALSE) %>%
+    replace(. == 67, TRUE) %>%
+    replace(. == 72, FALSE) %>%
+    replace(. == 79, FALSE)
+  return(dat)
+}
+
